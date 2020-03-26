@@ -7,7 +7,7 @@ import org.bukkit.plugin.java.JavaPlugin
 
 class RedstoneTools : JavaPlugin(), Listener {
     override fun onEnable() {
-        logger.info("it's alive")
+        logger.info("it's alive!")
         server.pluginManager.registerEvents(this, this)
     }
 
