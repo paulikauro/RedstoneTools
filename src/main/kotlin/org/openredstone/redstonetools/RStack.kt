@@ -1,24 +1,31 @@
 package org.openredstone.redstonetools.org.openredstone.redstonetools
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.annotation.CommandAlias
-import co.aikar.commands.annotation.CommandCompletion
-import co.aikar.commands.annotation.Default
-import co.aikar.commands.annotation.Optional
+import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
 import org.bukkit.entity.Player
 
 @CommandAlias("/rstack|/rs")
 class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
+    @Subcommand("-e")
+    fun rstackAndExpand(
+        player: Player,
+        @Default("1") times: Int,
+        @Default("2") spacing: Int
+    ) {
+        doit(player, times, spacing, true)
+    }
+
     @Default
-    @CommandCompletion("[-e]")
     fun rstack(
             player: Player,
-            @Optional expand: String?,
             @Default("1") times: Int,
             @Default("2") spacing: Int
     ) {
-        val ex = expand ?: "no expand"
-        player.sendMessage("hello $ex, $times many times with spacing $spacing")
+        doit(player, times, spacing, false)
+    }
+
+    fun doit(player: Player, times: Int, spacing: Int, expand: Boolean) {
+        player.sendMessage("hello ${player.displayName}, expand? $expand, $times many times with spacing $spacing")
     }
 }
