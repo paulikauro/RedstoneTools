@@ -60,7 +60,6 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
                 copy.isCopyingBiomes = false
                 copy.isCopyingEntities = false
                 copy.isRemovingEntities = false
-                copy.sourceMask = null
                 //
                 Operations.complete(copy)
                 var pos = selection.minimumPoint
