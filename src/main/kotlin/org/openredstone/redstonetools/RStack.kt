@@ -10,6 +10,7 @@ import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy
 import com.sk89q.worldedit.function.operation.Operations
 import com.sk89q.worldedit.math.BlockVector3
+import com.sk89q.worldedit.math.transform.AffineTransform
 import com.sk89q.worldedit.session.ClipboardHolder
 import com.sk89q.worldedit.util.Direction
 import org.bukkit.entity.Player
@@ -51,10 +52,20 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
         // dammit?
         try {
             worldEdit.createEditSession(player).use { editSession ->
-                val copy = ForwardExtentCopy(editSession, selection, clipboard, selection.minimumPoint)
+                // val copy = ForwardExtentCopy(editSession, selection, clipboard, selection.minimumPoint)
+                val copy = ForwardExtentCopy(editSession, selection, editSession, selection.minimumPoint)
+                //
+                copy.repetitions = times
+                copy.transform = AffineTransform().translate(offsetInc)
+                copy.isCopyingBiomes = false
+                copy.isCopyingEntities = false
+                copy.isRemovingEntities = false
+                copy.sourceMask = null
+                //
                 Operations.complete(copy)
                 var pos = selection.minimumPoint
-                repeat(times) {
+                //repeat(times) {
+                if (!true) {
                     pos = pos.add(offsetInc)
                     val op = ClipboardHolder(clipboard)
                             .createPaste(editSession)
