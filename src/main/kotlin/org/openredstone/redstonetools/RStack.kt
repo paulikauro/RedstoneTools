@@ -54,7 +54,6 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
             throw ConditionFailedException("You do not have a selection!")
         }
         val spacingVec = directionVectorFor(bukkitPlayer).multiply(spacing)
-        // dammit?
         val affected = try {
             // worldEdit.remember
             worldEdit.createEditSession(player).use { editSession ->
@@ -88,7 +87,6 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
         }
     }
 
-    // TODO: dammit?
     // TODO: direction argument for command?
     private fun directionVectorFor(player: BukkitPlayer): BlockVector3 {
         // one of N, E, S, W, up, down
