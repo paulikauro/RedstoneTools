@@ -11,7 +11,9 @@ import com.sk89q.worldedit.function.operation.ForwardExtentCopy
 import com.sk89q.worldedit.function.operation.Operations
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.session.ClipboardHolder
+import com.sk89q.worldedit.util.Direction
 import org.bukkit.entity.Player
+import kotlin.math.abs
 
 @CommandAlias("/rstack|/rs")
 class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
@@ -74,7 +76,24 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
     }
 
     private fun createOffsetIncrement(player: Player, spacing: Int): BlockVector3 {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val bukkitPlayer = worldEdit.wrapPlayer(player)
+        val direction = bukkitPlayer.cardinalDirection
+
+        assert(!direction.isSecondaryOrdinal)
+
+        var offsetIncrement = direction.toBlockVector()
+
+        val pitch = player.location.pitch
+        if (abs(pitch) > 22.5 && !direction.isUpright) {
+            // diagonal pitch, so add the y-component
+            // negative pitch is downwards
+            offsetIncrement = offsetIncrement.add(if (pitch < 0) {
+                Direction.UP
+            } else {
+                Direction.DOWN
+            }.toBlockVector())
+        }
+        return offsetIncrement.multiply(spacing)
     }
 
     private fun ensurePositive(arg: Int, name: String) {
