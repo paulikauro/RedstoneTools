@@ -1,20 +1,21 @@
 package org.openredstone.redstonetools
 
-import org.bukkit.event.EventHandler
-import org.bukkit.event.Listener
-import org.bukkit.event.player.PlayerJoinEvent
+import co.aikar.commands.PaperCommandManager
+import com.sk89q.worldedit.bukkit.WorldEditPlugin
 import org.bukkit.plugin.java.JavaPlugin
+import org.openredstone.redstonetools.org.openredstone.redstonetools.RStack
 
-class RedstoneTools : JavaPlugin(), Listener {
+class RedstoneTools : JavaPlugin() {
     override fun onEnable() {
-        logger.info("it's alive")
-        server.pluginManager.registerEvents(this, this)
-    }
-
-    @EventHandler
-    fun onPlayerJoin(event: PlayerJoinEvent) {
-        listOf("hi", "how", "are", "you").forEach {
-            event.player.sendMessage(it)
+        val maybeWE = server.pluginManager.getPlugin("WorldEdit")
+        if (maybeWE == null) {
+            logger.severe("Could not find WorldEdit! RedstoneTools requires WorldEdit to function properly.")
+            // TODO
+            return
         }
+        val worldEdit = maybeWE as WorldEditPlugin
+        val commandManager = PaperCommandManager(this)
+        val rstack = RStack(worldEdit)
+        commandManager.registerCommand(rstack)
     }
 }
