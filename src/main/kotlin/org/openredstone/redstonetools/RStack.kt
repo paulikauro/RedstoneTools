@@ -6,15 +6,16 @@ import co.aikar.commands.annotation.CommandAlias
 import co.aikar.commands.annotation.Default
 import co.aikar.commands.annotation.Subcommand
 import com.sk89q.worldedit.IncompleteRegionException
+import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.WorldEditException
+import com.sk89q.worldedit.bukkit.BukkitPlayer
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
-import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard
 import com.sk89q.worldedit.function.mask.ExistingBlockMask
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy
 import com.sk89q.worldedit.function.operation.Operations
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.math.transform.AffineTransform
-import com.sk89q.worldedit.session.ClipboardHolder
+import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.util.Direction
 import org.bukkit.ChatColor
 import org.bukkit.entity.Player
@@ -28,7 +29,7 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
         @Default("1") times: Int,
         @Default("2") spacing: Int
     ) {
-        doit(player, times, spacing, true)
+        doStack(player, times, spacing, true)
     }
 
     @Default
@@ -37,13 +38,14 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
             @Default("1") times: Int,
             @Default("2") spacing: Int
     ) {
-        doit(player, times, spacing, false)
+        doStack(player, times, spacing, false)
     }
 
-    fun doit(player: Player, times: Int, spacing: Int, expand: Boolean) {
+    // TODO: direction argument?
+    private fun doStack(player: Player, times: Int, spacing: Int, expand: Boolean) {
         ensurePositive(times, "stack amount")
         ensurePositive(spacing, "spacing")
-        // TODO: factor things out
+        val bukkitPlayer = worldEdit.wrapPlayer(player)
         val session =
                 worldEdit.getSession(player) ?: throw ConditionFailedException("Could not get a WorldEdit session")
         val selection = try {
@@ -51,13 +53,14 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
         } catch (e: IncompleteRegionException) {
             throw ConditionFailedException("You do not have a selection!")
         }
-        val offsetInc = createOffsetIncrement(player, spacing)
+        val spacingVec = directionVectorFor(bukkitPlayer).multiply(spacing)
         // dammit?
         val affected = try {
+            // worldEdit.remember
             worldEdit.createEditSession(player).use { editSession ->
                 val copy = ForwardExtentCopy(editSession, selection, editSession, selection.minimumPoint).apply {
                     repetitions = times
-                    transform = AffineTransform().translate(offsetInc)
+                    transform = AffineTransform().translate(spacingVec)
                     isCopyingBiomes = false
                     isCopyingEntities = false
                     isRemovingEntities = false
@@ -68,43 +71,43 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
                 copy.affected
             }
         } catch (e: WorldEditException) {
-            // TODO: maybe not a good exception?
             throw ConditionFailedException("Something went wrong: ${e.message}")
         }
 
         if (expand) {
-            // TODO: factor this out
-            selection.expand(offsetInc.multiply(times))
-            val bukkitPlayer = worldEdit.wrapPlayer(player)
-            val selector = session.getRegionSelector(bukkitPlayer.world)
-            selector.learnChanges()
-            selector.explainRegionAdjust(bukkitPlayer, session)
+            expandSelection(selection, spacingVec.multiply(times), session, bukkitPlayer)
         }
         player.sendMessage(ChatColor.LIGHT_PURPLE.toString() + "Operation completed, $affected blocks affected")
     }
 
-    // TODO: dammit?
-    // TODO: createOffsetIncrement -> getDirection (possibly argument, like north, me, west, ...)
-    // TODO: dedupe bukkitPlayer
-    private fun createOffsetIncrement(player: Player, spacing: Int): BlockVector3 {
-        val bukkitPlayer = worldEdit.wrapPlayer(player)
-        val direction = bukkitPlayer.cardinalDirection
-
-        assert(!direction.isSecondaryOrdinal)
-
-        var offsetIncrement = direction.toBlockVector()
-
-        val pitch = player.location.pitch
-        if (abs(pitch) > 22.5 && !direction.isUpright) {
-            // diagonal pitch, so add the y-component
-            // negative pitch is downwards
-            offsetIncrement = offsetIncrement.add(if (pitch < 0) {
-                Direction.UP
-            } else {
-                Direction.DOWN
-            }.toBlockVector())
+    private fun expandSelection(selection: Region, amount: BlockVector3, session: LocalSession, player: BukkitPlayer) {
+        selection.expand(amount)
+        session.getRegionSelector(player.world).apply {
+            learnChanges()
+            explainRegionAdjust(player, session)
         }
-        return offsetIncrement.multiply(spacing)
+    }
+
+    // TODO: dammit?
+    // TODO: direction argument for command?
+    private fun directionVectorFor(player: BukkitPlayer): BlockVector3 {
+        // one of N, E, S, W, up, down
+        val direction = player.cardinalDirection
+        val vec = direction.toBlockVector()
+        val pitch = player.location.pitch
+        if (direction.isUpright || abs(pitch) <= 22.5) {
+            // horizontal or vertical direction
+            return vec
+        }
+        // diagonal direction, need to add the y-component
+        // negative pitch is downwards
+        return vec.add(
+                if (pitch < 0) {
+                    Direction.UP
+                } else {
+                    Direction.DOWN
+                }.toBlockVector()
+        )
     }
 
     private fun ensurePositive(arg: Int, name: String) {
