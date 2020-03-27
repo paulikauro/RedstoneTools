@@ -3,7 +3,14 @@ package org.openredstone.redstonetools.org.openredstone.redstonetools
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.ConditionFailedException
 import co.aikar.commands.annotation.*
+import com.sk89q.worldedit.IncompleteRegionException
+import com.sk89q.worldedit.WorldEditException
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
+import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard
+import com.sk89q.worldedit.function.operation.ForwardExtentCopy
+import com.sk89q.worldedit.function.operation.Operations
+import com.sk89q.worldedit.math.BlockVector3
+import com.sk89q.worldedit.session.ClipboardHolder
 import org.bukkit.entity.Player
 
 @CommandAlias("/rstack|/rs")
@@ -30,6 +37,44 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
         ensurePositive(times, "stack amount")
         ensurePositive(spacing, "spacing")
         player.sendMessage("hello ${player.displayName}, expand? $expand, $times many times with spacing $spacing")
+        val session =
+                worldEdit.getSession(player) ?: throw ConditionFailedException("Could not get a WorldEdit session")
+        val selection = try {
+            session.getSelection(session.selectionWorld)
+        } catch (e: IncompleteRegionException) {
+            throw ConditionFailedException("You do not have a selection!")
+        }
+        val offsetInc = createOffsetIncrement(player, spacing)
+        val clipboard = BlockArrayClipboard(selection)
+        // dammit?
+        try {
+            worldEdit.createEditSession(player).use { editSession ->
+                val copy = ForwardExtentCopy(editSession, selection, clipboard, selection.minimumPoint)
+                Operations.complete(copy)
+                var pos = selection.minimumPoint
+                repeat(times) {
+                    pos = pos.add(offsetInc)
+                    val op = ClipboardHolder(clipboard)
+                            .createPaste(editSession)
+                            .to(pos)
+                            .ignoreAirBlocks(true)
+                            .build()
+                    Operations.complete(op)
+                }
+                session.remember(editSession)
+            }
+        } catch (e: WorldEditException) {
+            throw ConditionFailedException("Something went wrong: ${e.message}")
+        }
+
+        if (expand) {
+            selection.expand(offsetInc.multiply(times))
+        }
+
+    }
+
+    private fun createOffsetIncrement(player: Player, spacing: Int): BlockVector3 {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     private fun ensurePositive(arg: Int, name: String) {
