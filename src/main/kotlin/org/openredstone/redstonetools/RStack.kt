@@ -71,8 +71,12 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
 
         if (expand) {
             selection.expand(offsetInc.multiply(times))
+            val bukkitPlayer = worldEdit.wrapPlayer(player)
+            val selector = session.getRegionSelector(bukkitPlayer.world)
+            selector.learnChanges()
+            selector.explainRegionAdjust(bukkitPlayer, session)
         }
-
+        player.sendMessage("Operation completed")
     }
 
     private fun createOffsetIncrement(player: Player, spacing: Int): BlockVector3 {
