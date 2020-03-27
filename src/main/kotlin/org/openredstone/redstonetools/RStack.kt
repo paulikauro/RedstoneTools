@@ -16,6 +16,7 @@ import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.math.transform.AffineTransform
 import com.sk89q.worldedit.session.ClipboardHolder
 import com.sk89q.worldedit.util.Direction
+import org.bukkit.ChatColor
 import org.bukkit.entity.Player
 import kotlin.math.abs
 
@@ -51,33 +52,20 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
             throw ConditionFailedException("You do not have a selection!")
         }
         val offsetInc = createOffsetIncrement(player, spacing)
-        val clipboard = BlockArrayClipboard(selection)
         // dammit?
-        try {
+        val affected = try {
             worldEdit.createEditSession(player).use { editSession ->
-                // val copy = ForwardExtentCopy(editSession, selection, clipboard, selection.minimumPoint)
-                val copy = ForwardExtentCopy(editSession, selection, editSession, selection.minimumPoint)
-                //
-                copy.repetitions = times
-                copy.transform = AffineTransform().translate(offsetInc)
-                copy.isCopyingBiomes = false
-                copy.isCopyingEntities = false
-                copy.isRemovingEntities = false
-                copy.sourceMask = ExistingBlockMask(editSession)
-                //
-                Operations.complete(copy)
-                var pos = selection.minimumPoint
-                //repeat(times) {
-                if (!true) {
-                    pos = pos.add(offsetInc)
-                    val op = ClipboardHolder(clipboard)
-                            .createPaste(editSession)
-                            .to(pos)
-                            .ignoreAirBlocks(true)
-                            .build()
-                    Operations.complete(op)
+                val copy = ForwardExtentCopy(editSession, selection, editSession, selection.minimumPoint).apply {
+                    repetitions = times
+                    transform = AffineTransform().translate(offsetInc)
+                    isCopyingBiomes = false
+                    isCopyingEntities = false
+                    isRemovingEntities = false
+                    sourceMask = ExistingBlockMask(editSession)
                 }
+                Operations.complete(copy)
                 session.remember(editSession)
+                copy.affected
             }
         } catch (e: WorldEditException) {
             throw ConditionFailedException("Something went wrong: ${e.message}")
@@ -90,7 +78,7 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
             selector.learnChanges()
             selector.explainRegionAdjust(bukkitPlayer, session)
         }
-        player.sendMessage("Operation completed")
+        player.sendMessage(ChatColor.LIGHT_PURPLE.toString() + "Operation completed, $affected blocks affected")
     }
 
     private fun createOffsetIncrement(player: Player, spacing: Int): BlockVector3 {
