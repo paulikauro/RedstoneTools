@@ -43,7 +43,6 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
     fun doit(player: Player, times: Int, spacing: Int, expand: Boolean) {
         ensurePositive(times, "stack amount")
         ensurePositive(spacing, "spacing")
-        player.sendMessage("hello ${player.displayName}, expand? $expand, $times many times with spacing $spacing")
         val session =
                 worldEdit.getSession(player) ?: throw ConditionFailedException("Could not get a WorldEdit session")
         val selection = try {
