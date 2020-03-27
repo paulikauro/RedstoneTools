@@ -2,11 +2,14 @@ package org.openredstone.redstonetools.org.openredstone.redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.ConditionFailedException
-import co.aikar.commands.annotation.*
+import co.aikar.commands.annotation.CommandAlias
+import co.aikar.commands.annotation.Default
+import co.aikar.commands.annotation.Subcommand
 import com.sk89q.worldedit.IncompleteRegionException
 import com.sk89q.worldedit.WorldEditException
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
 import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard
+import com.sk89q.worldedit.function.mask.ExistingBlockMask
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy
 import com.sk89q.worldedit.function.operation.Operations
 import com.sk89q.worldedit.math.BlockVector3
@@ -60,6 +63,7 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
                 copy.isCopyingBiomes = false
                 copy.isCopyingEntities = false
                 copy.isRemovingEntities = false
+                copy.sourceMask = ExistingBlockMask(editSession)
                 //
                 Operations.complete(copy)
                 var pos = selection.minimumPoint
