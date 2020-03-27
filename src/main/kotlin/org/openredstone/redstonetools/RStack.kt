@@ -43,6 +43,7 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
     fun doit(player: Player, times: Int, spacing: Int, expand: Boolean) {
         ensurePositive(times, "stack amount")
         ensurePositive(spacing, "spacing")
+        // TODO: factor things out
         val session =
                 worldEdit.getSession(player) ?: throw ConditionFailedException("Could not get a WorldEdit session")
         val selection = try {
@@ -67,10 +68,12 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
                 copy.affected
             }
         } catch (e: WorldEditException) {
+            // TODO: maybe not a good exception?
             throw ConditionFailedException("Something went wrong: ${e.message}")
         }
 
         if (expand) {
+            // TODO: factor this out
             selection.expand(offsetInc.multiply(times))
             val bukkitPlayer = worldEdit.wrapPlayer(player)
             val selector = session.getRegionSelector(bukkitPlayer.world)
@@ -80,6 +83,9 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
         player.sendMessage(ChatColor.LIGHT_PURPLE.toString() + "Operation completed, $affected blocks affected")
     }
 
+    // TODO: dammit?
+    // TODO: createOffsetIncrement -> getDirection (possibly argument, like north, me, west, ...)
+    // TODO: dedupe bukkitPlayer
     private fun createOffsetIncrement(player: Player, spacing: Int): BlockVector3 {
         val bukkitPlayer = worldEdit.wrapPlayer(player)
         val direction = bukkitPlayer.cardinalDirection
