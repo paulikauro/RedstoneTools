@@ -2,9 +2,7 @@ package org.openredstone.redstonetools.org.openredstone.redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.ConditionFailedException
-import co.aikar.commands.annotation.CommandAlias
-import co.aikar.commands.annotation.Default
-import co.aikar.commands.annotation.Syntax
+import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.IncompleteRegionException
 import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.UnknownDirectionException
@@ -30,9 +28,11 @@ private val BlockVector3.isUpright: Boolean
     }
 
 @CommandAlias("/rstack|/rs")
+@Description("Redstone stacking command")
+@CommandPermission("redstonetools.rstack")
 class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
     @Default
-    @Syntax("</rstack> [-e] [direction] [count] [spacing]")
+    @Syntax("[-e] [direction] [count] [spacing]")
     fun rstack(
             player: Player,
             args: Array<String>
