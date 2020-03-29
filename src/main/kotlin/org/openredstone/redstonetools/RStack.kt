@@ -4,7 +4,6 @@ import co.aikar.commands.BaseCommand
 import co.aikar.commands.ConditionFailedException
 import co.aikar.commands.annotation.CommandAlias
 import co.aikar.commands.annotation.Default
-import co.aikar.commands.annotation.Subcommand
 import com.sk89q.worldedit.IncompleteRegionException
 import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.WorldEditException
@@ -19,32 +18,49 @@ import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.util.Direction
 import org.bukkit.ChatColor
 import org.bukkit.entity.Player
+import java.lang.Character.isDigit
+import java.lang.Integer.parseInt
 import kotlin.math.abs
 
 @CommandAlias("/rstack|/rs")
 class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
-    @Subcommand("-e")
-    fun rstackAndExpand(
-        player: Player,
-        @Default("1") times: Int,
-        @Default("2") spacing: Int
-    ) {
-        doStack(player, times, spacing, true)
-    }
-
     @Default
     fun rstack(
             player: Player,
-            @Default("1") times: Int,
-            @Default("2") spacing: Int
+            args: Array<String>
     ) {
-        doStack(player, times, spacing, false)
+        var expand = false
+        var direction: String? = null
+        val numbers = mutableListOf<Int>()
+        for (arg in args) {
+            if (arg == "-e") {
+                // don't care about duplicates
+                expand = true
+            } else if (arg.all(::isDigit)) {
+                numbers.add(parseInt(arg))
+            } else {
+                // probably a direction
+                if (direction != null) {
+                    // send help
+                    player.sendMessage("Too many arguments!")
+                    return
+                }
+                direction = arg
+            }
+        }
+        if (numbers.size > 2) {
+            // send help
+            player.sendMessage("Too many arguments!")
+            return
+        }
+        val count = numbers.getOrDefault(0, 1)
+        val spacing = numbers.getOrDefault(1, 2)
+//        ensurePositive(count, "stack amount")
+//        ensurePositive(spacing, "spacing")
+        doStack(player, count, spacing, expand)
     }
 
-    // TODO: direction argument?
-    private fun doStack(player: Player, times: Int, spacing: Int, expand: Boolean) {
-        ensurePositive(times, "stack amount")
-        ensurePositive(spacing, "spacing")
+    private fun doStack(player: Player, count: Int, spacing: Int, expand: Boolean) {
         val bukkitPlayer = worldEdit.wrapPlayer(player)
         val session =
                 worldEdit.getSession(player) ?: throw ConditionFailedException("Could not get a WorldEdit session")
@@ -58,7 +74,7 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
             // worldEdit.remember
             worldEdit.createEditSession(player).use { editSession ->
                 val copy = ForwardExtentCopy(editSession, selection, editSession, selection.minimumPoint).apply {
-                    repetitions = times
+                    repetitions = count
                     transform = AffineTransform().translate(spacingVec)
                     isCopyingBiomes = false
                     isCopyingEntities = false
@@ -74,7 +90,7 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
         }
 
         if (expand) {
-            expandSelection(selection, spacingVec.multiply(times), session, bukkitPlayer)
+            expandSelection(selection, spacingVec.multiply(count), session, bukkitPlayer)
         }
         player.sendMessage(ChatColor.LIGHT_PURPLE.toString() + "Operation completed, $affected blocks affected")
     }
@@ -115,3 +131,6 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
         throw ConditionFailedException("$name must be positive! $arg is not")
     }
 }
+
+private fun <E> List<E>.getOrDefault(index: Int, default: E): E = getOrNull(index) ?: default
+
