@@ -1,6 +1,6 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-group = "org.openredstone"
+group = ""
 version = "1.0-SNAPSHOT"
 
 plugins {
@@ -41,7 +41,7 @@ dependencies {
 }
 
 tasks.shadowJar {
-    relocate("co.aikar.commands", "org.openredstone.redstonetools.acf")
+    relocate("co.aikar.commands", "redstonetools.acf")
 }
 
 tasks.withType<KotlinCompile> {

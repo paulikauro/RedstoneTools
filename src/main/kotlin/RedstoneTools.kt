@@ -1,9 +1,8 @@
-package org.openredstone.redstonetools
+package redstonetools
 
 import co.aikar.commands.PaperCommandManager
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
 import org.bukkit.plugin.java.JavaPlugin
-import org.openredstone.redstonetools.org.openredstone.redstonetools.RStack
 
 class RedstoneTools : JavaPlugin() {
     override fun onEnable() {
@@ -14,7 +13,7 @@ class RedstoneTools : JavaPlugin() {
             return
         }
         val commandManager = PaperCommandManager(this)
-        val rstack = RStack(wePlugin)
+        val rstack = RStack(wePlugin.worldEdit)
         commandManager.registerCommand(rstack)
     }
 }

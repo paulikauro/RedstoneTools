@@ -1,12 +1,10 @@
-package org.openredstone.redstonetools.org.openredstone.redstonetools
+package redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.ConditionFailedException
 import co.aikar.commands.annotation.*
-import com.sk89q.worldedit.IncompleteRegionException
-import com.sk89q.worldedit.LocalSession
-import com.sk89q.worldedit.UnknownDirectionException
-import com.sk89q.worldedit.WorldEditException
+import com.sk89q.worldedit.*
+import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.bukkit.BukkitPlayer
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
 import com.sk89q.worldedit.function.mask.ExistingBlockMask
@@ -30,7 +28,7 @@ private val BlockVector3.isUpright: Boolean
 @CommandAlias("/rstack|/rs")
 @Description("Redstone stacking command")
 @CommandPermission("redstonetools.rstack")
-class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
+class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
     @Default
     // ...
     // also missing -parameters in build.gradle.kts which wrecks things
@@ -65,27 +63,28 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
             count *= -1
             spacing *= -1
         }
-        try {
-            doStack(player, count, spacing, expand, direction ?: "me")
+        val affected = try {
+            doStack(BukkitAdapter.adapt(player), count, spacing, expand, direction ?: "me")
         } catch (e: UnknownDirectionException) {
             throw ConditionFailedException("Unknown direction")
         }
+        player.sendMessage(ChatColor.LIGHT_PURPLE.toString() + "Operation completed, $affected blocks affected")
     }
 
     // throws UnknownDirectionException
-    private fun doStack(player: Player, count: Int, spacing: Int, expand: Boolean, direction: String) {
-        val bukkitPlayer = worldEdit.wrapPlayer(player)
-        val session =
-                worldEdit.getSession(player) ?: throw ConditionFailedException("Could not get a WorldEdit session")
+    private fun doStack(player: BukkitPlayer, count: Int, spacing: Int, expand: Boolean, direction: String): Int {
+        val session = worldEdit.sessionManager.get(player)
         val selection = try {
             session.getSelection(session.selectionWorld)
         } catch (e: IncompleteRegionException) {
             throw ConditionFailedException("You do not have a selection!")
         }
-        val spacingVec = directionVectorFor(bukkitPlayer, direction).multiply(spacing)
+        val spacingVec = directionVectorFor(player, direction).multiply(spacing)
         val affected = try {
-            // worldEdit.remember?
-            worldEdit.createEditSession(player).use { editSession ->
+            // worldEditPlugin.remember does flushBlockBag
+            worldEdit.editSessionFactory
+                    .getEditSession(player.world, session.blockChangeLimit, session.getBlockBag(player), player)
+                    .use { editSession ->
                 val copy = ForwardExtentCopy(editSession, selection, editSession, selection.minimumPoint).apply {
                     repetitions = count
                     transform = AffineTransform().translate(spacingVec)
@@ -101,11 +100,10 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
         } catch (e: WorldEditException) {
             throw ConditionFailedException("Something went wrong: ${e.message}")
         }
-
         if (expand) {
-            expandSelection(selection, spacingVec.multiply(count), session, bukkitPlayer)
+            expandSelection(selection, spacingVec.multiply(count), session, player)
         }
-        player.sendMessage(ChatColor.LIGHT_PURPLE.toString() + "Operation completed, $affected blocks affected")
+        return affected
     }
 
     private fun expandSelection(selection: Region, amount: BlockVector3, session: LocalSession, player: BukkitPlayer) {
@@ -126,7 +124,7 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
             isDiagDirStr(direction, 'd') -> 25.0f
             else -> 0.0f
         }
-        val vec = worldEdit.worldEdit.getDiagonalDirection(player, direction)
+        val vec = worldEdit.getDiagonalDirection(player, direction)
         if (vec.isUpright || abs(pitch) <= 22.5) {
             // horizontal or vertical direction
             return vec
