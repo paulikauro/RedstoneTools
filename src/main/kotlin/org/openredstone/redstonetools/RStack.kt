@@ -49,9 +49,10 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
         if (numbers.size > 2) {
             throw ConditionFailedException("Too many arguments!")
         }
-        player.sendMessage(numbers)
+        player.sendMessage(numbers.toString())
         val count = numbers.getOrDefault(0, 1)
         val spacing = numbers.getOrDefault(1, 2)
+        player.sendMessage("count $count spacing $spacing")
         ensurePositive(count, "stack amount")
 //        ensurePositive(spacing, "spacing")
         doStack(player, count, spacing, expand)
