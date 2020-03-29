@@ -36,7 +36,7 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
             when {
                 // don't care about duplicate flags
                 arg == "-e" -> expand = true
-                arg.all(::isDigit) -> numbers.add(parseInt(arg))
+                arg.all { it.isDigit() || it in "+-" } -> numbers.add(parseInt(arg))
                 else -> {
                     // probably a direction string
                     if (direction != null) {
