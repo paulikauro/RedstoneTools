@@ -118,8 +118,8 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
         val pitch = when {
             direction == "me" -> player.location.pitch
             // diagonal direction strings, eg. nd (north down) or fu (forward up)
-            isDiagDirStr(direction, 'u') -> 25.0f
-            isDiagDirStr(direction, 'd') -> -25.0f
+            isDiagDirStr(direction, 'u') -> -25.0f
+            isDiagDirStr(direction, 'd') -> 25.0f
             else -> 0.0f
         }
         val vec = worldEdit.worldEdit.getDiagonalDirection(player, direction)
