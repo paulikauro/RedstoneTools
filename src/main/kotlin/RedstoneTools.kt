@@ -7,15 +7,14 @@ import org.openredstone.redstonetools.org.openredstone.redstonetools.RStack
 
 class RedstoneTools : JavaPlugin() {
     override fun onEnable() {
-        val maybeWE = server.pluginManager.getPlugin("WorldEdit")
-        if (maybeWE == null) {
-            logger.severe("Could not find WorldEdit! RedstoneTools requires WorldEdit to function properly.")
-            // TODO
+        val wePlugin = server.pluginManager.getPlugin("WorldEdit")
+        if (wePlugin == null || wePlugin !is WorldEditPlugin) {
+            logger.severe("Could not load WorldEdit! RedstoneTools requires WorldEdit to function properly.")
+            logger.severe("Disabled.")
             return
         }
-        val worldEdit = maybeWE as WorldEditPlugin
         val commandManager = PaperCommandManager(this)
-        val rstack = RStack(worldEdit)
+        val rstack = RStack(wePlugin)
         commandManager.registerCommand(rstack)
     }
 }

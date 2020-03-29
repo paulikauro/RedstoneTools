@@ -2,11 +2,10 @@ package org.openredstone.redstonetools.org.openredstone.redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.ConditionFailedException
-import co.aikar.commands.annotation.CommandAlias
-import co.aikar.commands.annotation.Default
-import co.aikar.commands.annotation.Subcommand
+import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.IncompleteRegionException
 import com.sk89q.worldedit.LocalSession
+import com.sk89q.worldedit.UnknownDirectionException
 import com.sk89q.worldedit.WorldEditException
 import com.sk89q.worldedit.bukkit.BukkitPlayer
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
@@ -19,32 +18,62 @@ import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.util.Direction
 import org.bukkit.ChatColor
 import org.bukkit.entity.Player
+import java.lang.Integer.parseInt
 import kotlin.math.abs
 
-@CommandAlias("/rstack|/rs")
-class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
-    @Subcommand("-e")
-    fun rstackAndExpand(
-        player: Player,
-        @Default("1") times: Int,
-        @Default("2") spacing: Int
-    ) {
-        doStack(player, times, spacing, true)
+private val BlockVector3.isUpright: Boolean
+    get() {
+        // TODO: is this comparison ok?
+        return x == 0 && z == 0
     }
 
+@CommandAlias("/rstack|/rs")
+@Description("Redstone stacking command")
+@CommandPermission("redstonetools.rstack")
+class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
     @Default
+    // ...
+    // also missing -parameters in build.gradle.kts which wrecks things
+    @Syntax("[-e] [direction] [count] [spacing]")
     fun rstack(
             player: Player,
-            @Default("1") times: Int,
-            @Default("2") spacing: Int
+            args: Array<String>
     ) {
-        doStack(player, times, spacing, false)
+        var expand = false
+        var direction: String? = null
+        val numbers = mutableListOf<Int>()
+        for (arg in args) {
+            when {
+                // don't care about duplicate flags
+                arg == "-e" -> expand = true
+                arg.all { it.isDigit() || it in "+-" } -> numbers.add(parseInt(arg))
+                else -> {
+                    // probably a direction string
+                    if (direction != null) {
+                        throw ConditionFailedException("Too many arguments!")
+                    }
+                    direction = arg
+                }
+            }
+        }
+        if (numbers.size > 2) {
+            throw ConditionFailedException("Too many arguments!")
+        }
+        var count = numbers.getOrDefault(0, 1)
+        var spacing = numbers.getOrDefault(1, 2)
+        if (count < 0) {
+            count *= -1
+            spacing *= -1
+        }
+        try {
+            doStack(player, count, spacing, expand, direction ?: "me")
+        } catch (e: UnknownDirectionException) {
+            throw ConditionFailedException("Unknown direction")
+        }
     }
 
-    // TODO: direction argument?
-    private fun doStack(player: Player, times: Int, spacing: Int, expand: Boolean) {
-        ensurePositive(times, "stack amount")
-        ensurePositive(spacing, "spacing")
+    // throws UnknownDirectionException
+    private fun doStack(player: Player, count: Int, spacing: Int, expand: Boolean, direction: String) {
         val bukkitPlayer = worldEdit.wrapPlayer(player)
         val session =
                 worldEdit.getSession(player) ?: throw ConditionFailedException("Could not get a WorldEdit session")
@@ -53,12 +82,12 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
         } catch (e: IncompleteRegionException) {
             throw ConditionFailedException("You do not have a selection!")
         }
-        val spacingVec = directionVectorFor(bukkitPlayer).multiply(spacing)
+        val spacingVec = directionVectorFor(bukkitPlayer, direction).multiply(spacing)
         val affected = try {
-            // worldEdit.remember
+            // worldEdit.remember?
             worldEdit.createEditSession(player).use { editSession ->
                 val copy = ForwardExtentCopy(editSession, selection, editSession, selection.minimumPoint).apply {
-                    repetitions = times
+                    repetitions = count
                     transform = AffineTransform().translate(spacingVec)
                     isCopyingBiomes = false
                     isCopyingEntities = false
@@ -74,7 +103,7 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
         }
 
         if (expand) {
-            expandSelection(selection, spacingVec.multiply(times), session, bukkitPlayer)
+            expandSelection(selection, spacingVec.multiply(count), session, bukkitPlayer)
         }
         player.sendMessage(ChatColor.LIGHT_PURPLE.toString() + "Operation completed, $affected blocks affected")
     }
@@ -87,18 +116,23 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
         }
     }
 
-    // TODO: direction argument for command?
-    private fun directionVectorFor(player: BukkitPlayer): BlockVector3 {
-        // one of N, E, S, W, up, down
-        val direction = player.cardinalDirection
-        val vec = direction.toBlockVector()
-        val pitch = player.location.pitch
-        if (direction.isUpright || abs(pitch) <= 22.5) {
+    // throws UnknownDirectionException
+    private fun directionVectorFor(player: BukkitPlayer, direction: String): BlockVector3 {
+        // TODO: clean this up
+        val pitch = when {
+            direction == "me" -> player.location.pitch
+            // diagonal direction strings, eg. nd (north down) or fu (forward up)
+            isDiagDirStr(direction, 'u') -> -25.0f
+            isDiagDirStr(direction, 'd') -> 25.0f
+            else -> 0.0f
+        }
+        val vec = worldEdit.worldEdit.getDiagonalDirection(player, direction)
+        if (vec.isUpright || abs(pitch) <= 22.5) {
             // horizontal or vertical direction
             return vec
         }
         // diagonal direction, need to add the y-component
-        // negative pitch is downwards
+        // negative pitch is upwards
         return vec.add(
                 if (pitch < 0) {
                     Direction.UP
@@ -108,10 +142,10 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
         )
     }
 
-    private fun ensurePositive(arg: Int, name: String) {
-        if (arg > 0) {
-            return
-        }
-        throw ConditionFailedException("$name must be positive! $arg is not")
-    }
+    private fun isDiagDirStr(direction: String, upOrDown: Char) =
+            // check length, because 'd' and 'u' alone are not diagonal directions (they're just up or down)
+            direction.length > 1 && direction.last().toLowerCase() == upOrDown
 }
+
+private fun <E> List<E>.getOrDefault(index: Int, default: E): E = getOrNull(index) ?: default
+
