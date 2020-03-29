@@ -24,9 +24,8 @@ import kotlin.math.abs
 
 private val BlockVector3.isUpright: Boolean
     get() {
-        // TODO: is this ok?
-        // perpendicular to X-axis (dot product 0) -> is upright
-        return dot(BlockVector3.UNIT_X) == 0.0
+        // TODO: is this comparison ok?
+        return x == 0 && z == 0
     }
 
 @CommandAlias("/rstack|/rs")
