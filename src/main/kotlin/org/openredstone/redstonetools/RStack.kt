@@ -32,6 +32,8 @@ private val BlockVector3.isUpright: Boolean
 @CommandPermission("redstonetools.rstack")
 class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
     @Default
+    // ...
+    // also missing -parameters in build.gradle.kts which wrecks things
     @Syntax("[-e] [direction] [count] [spacing]")
     fun rstack(
             player: Player,
