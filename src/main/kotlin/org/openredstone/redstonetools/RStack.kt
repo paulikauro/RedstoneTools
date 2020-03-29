@@ -33,29 +33,25 @@ class RStack(private val worldEdit: WorldEditPlugin) : BaseCommand() {
         var direction: String? = null
         val numbers = mutableListOf<Int>()
         for (arg in args) {
-            if (arg == "-e") {
-                // don't care about duplicates
-                expand = true
-            } else if (arg.all(::isDigit)) {
-                numbers.add(parseInt(arg))
-            } else {
-                // probably a direction
-                if (direction != null) {
-                    // send help
-                    player.sendMessage("Too many arguments!")
-                    return
+            when {
+                // don't care about duplicate flags
+                arg == "-e" -> expand = true
+                arg.all(::isDigit) -> numbers.add(parseInt(arg))
+                else -> {
+                    // probably a direction string
+                    if (direction != null) {
+                        throw ConditionFailedException("Too many arguments!")
+                    }
+                    direction = arg
                 }
-                direction = arg
             }
         }
         if (numbers.size > 2) {
-            // send help
-            player.sendMessage("Too many arguments!")
-            return
+            throw ConditionFailedException("Too many arguments!")
         }
         val count = numbers.getOrDefault(0, 1)
         val spacing = numbers.getOrDefault(1, 2)
-//        ensurePositive(count, "stack amount")
+        ensurePositive(count, "stack amount")
 //        ensurePositive(spacing, "spacing")
         doStack(player, count, spacing, expand)
     }
