@@ -1,4 +1,4 @@
-package org.openredstone.redstonetools.org.openredstone.redstonetools
+package redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.ConditionFailedException
