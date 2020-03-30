@@ -13,7 +13,7 @@ class RedstoneTools : JavaPlugin() {
             return
         }
         val commandManager = PaperCommandManager(this)
-        val rstack = RStack(wePlugin)
+        val rstack = RStack(wePlugin.worldEdit)
         commandManager.registerCommand(rstack)
     }
 }

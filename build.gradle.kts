@@ -34,8 +34,7 @@ dependencies {
     implementation(group = "co.aikar", name = "acf-paper", version = "0.5.0-SNAPSHOT")
 
     compileOnly(group = "org.spigotmc", name = "spigot-api", version = "1.14.4-R0.1-SNAPSHOT")
-    // compileOnly(group = "org.spigotmc", name = "plugin-annotations", version = "1.2.2-SNAPSHOT")
-    compileOnly(group = "com.sk89q.worldedit", name = "worldedit-bukkit", version = "7.0.1-SNAPSHOT")
+    compileOnly(group = "com.sk89q.worldedit", name = "worldedit-bukkit", version = "7.1.0-SNAPSHOT")
 
     kapt(group = "org.spigotmc", name = "plugin-annotations", version = "1.2.2-SNAPSHOT")
 }
@@ -48,3 +47,6 @@ tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
 }
 
+tasks.build {
+    dependsOn(tasks.shadowJar)
+}
