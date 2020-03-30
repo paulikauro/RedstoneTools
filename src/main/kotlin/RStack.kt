@@ -6,13 +6,13 @@ import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.*
 import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.bukkit.BukkitPlayer
-import com.sk89q.worldedit.bukkit.WorldEditPlugin
 import com.sk89q.worldedit.function.mask.ExistingBlockMask
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy
 import com.sk89q.worldedit.function.operation.Operations
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.math.transform.AffineTransform
 import com.sk89q.worldedit.regions.Region
+import com.sk89q.worldedit.session.request.Request
 import com.sk89q.worldedit.util.Direction
 import org.bukkit.ChatColor
 import org.bukkit.entity.Player
@@ -73,6 +73,7 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
 
     // throws UnknownDirectionException
     private fun doStack(player: BukkitPlayer, count: Int, spacing: Int, expand: Boolean, direction: String): Int {
+        Request.reset()
         val session = worldEdit.sessionManager.get(player)
         val selection = try {
             session.getSelection(session.selectionWorld)
@@ -82,9 +83,7 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         val spacingVec = directionVectorFor(player, direction).multiply(spacing)
         val affected = try {
             // worldEditPlugin.remember does flushBlockBag
-            worldEdit.editSessionFactory
-                    .getEditSession(player.world, session.blockChangeLimit, session.getBlockBag(player), player)
-                    .use { editSession ->
+            session.createEditSession(player).use { editSession ->
                 val copy = ForwardExtentCopy(editSession, selection, editSession, selection.minimumPoint).apply {
                     repetitions = count
                     transform = AffineTransform().translate(spacingVec)
@@ -103,6 +102,7 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         if (expand) {
             expandSelection(selection, spacingVec.multiply(count), session, player)
         }
+        Request.reset()
         return affected
     }
 

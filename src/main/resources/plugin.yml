@@ -1,5 +1,5 @@
 name: RedstoneTools
 version: 1.0-SNAPSHOT
 main: redstonetools.RedstoneTools
-api-version: 1.15
+api-version: 1.14
 depend: [WorldEdit]
