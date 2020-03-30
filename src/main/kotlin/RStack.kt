@@ -12,7 +12,6 @@ import com.sk89q.worldedit.function.operation.Operations
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.math.transform.AffineTransform
 import com.sk89q.worldedit.regions.Region
-import com.sk89q.worldedit.session.request.Request
 import com.sk89q.worldedit.util.Direction
 import org.bukkit.ChatColor
 import org.bukkit.entity.Player
@@ -73,7 +72,6 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
 
     // throws UnknownDirectionException
     private fun doStack(player: BukkitPlayer, count: Int, spacing: Int, expand: Boolean, direction: String): Int {
-        Request.reset()
         val session = worldEdit.sessionManager.get(player)
         val selection = try {
             session.getSelection(session.selectionWorld)
@@ -102,7 +100,6 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         if (expand) {
             expandSelection(selection, spacingVec.multiply(count), session, player)
         }
-        Request.reset()
         return affected
     }
 
