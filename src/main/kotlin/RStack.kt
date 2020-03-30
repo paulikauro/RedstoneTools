@@ -5,7 +5,6 @@ import co.aikar.commands.ConditionFailedException
 import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.*
 import com.sk89q.worldedit.bukkit.BukkitAdapter
-import com.sk89q.worldedit.bukkit.BukkitPlayer
 import com.sk89q.worldedit.function.mask.ExistingBlockMask
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy
 import com.sk89q.worldedit.function.operation.Operations
@@ -13,10 +12,12 @@ import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.math.transform.AffineTransform
 import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.util.Direction
-import org.bukkit.ChatColor
+import com.sk89q.worldedit.util.formatting.text.TextComponent
 import org.bukkit.entity.Player
 import java.lang.Integer.parseInt
 import kotlin.math.abs
+
+typealias WEPlayer = com.sk89q.worldedit.entity.Player
 
 private val BlockVector3.isUpright: Boolean
     get() {
@@ -67,11 +68,10 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         } catch (e: UnknownDirectionException) {
             throw ConditionFailedException("Unknown direction")
         }
-        player.sendMessage(ChatColor.LIGHT_PURPLE.toString() + "Operation completed, $affected blocks affected")
     }
 
     // throws UnknownDirectionException
-    private fun doStack(player: BukkitPlayer, count: Int, spacing: Int, expand: Boolean, direction: String): Int {
+    private fun doStack(player: WEPlayer, count: Int, spacing: Int, expand: Boolean, direction: String): Int {
         val session = worldEdit.sessionManager.get(player)
         val selection = try {
             session.getSelection(session.selectionWorld)
@@ -80,7 +80,6 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         }
         val spacingVec = directionVectorFor(player, direction).multiply(spacing)
         val affected = try {
-            // worldEditPlugin.remember does flushBlockBag
             session.createEditSession(player).use { editSession ->
                 val copy = ForwardExtentCopy(editSession, selection, editSession, selection.minimumPoint).apply {
                     repetitions = count
@@ -92,18 +91,20 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
                 }
                 Operations.complete(copy)
                 session.remember(editSession)
+                // TODO: flush block bag?
                 copy.affected
             }
         } catch (e: WorldEditException) {
             throw ConditionFailedException("Something went wrong: ${e.message}")
         }
+        player.printInfo(TextComponent.of("Operation completed, $affected blocks affected"))
         if (expand) {
             expandSelection(selection, spacingVec.multiply(count), session, player)
         }
         return affected
     }
 
-    private fun expandSelection(selection: Region, amount: BlockVector3, session: LocalSession, player: BukkitPlayer) {
+    private fun expandSelection(selection: Region, amount: BlockVector3, session: LocalSession, player: WEPlayer) {
         selection.expand(amount)
         session.getRegionSelector(player.world).apply {
             learnChanges()
@@ -112,7 +113,7 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
     }
 
     // throws UnknownDirectionException
-    private fun directionVectorFor(player: BukkitPlayer, direction: String): BlockVector3 {
+    private fun directionVectorFor(player: WEPlayer, direction: String): BlockVector3 {
         // TODO: clean this up
         val pitch = when {
             direction == "me" -> player.location.pitch
