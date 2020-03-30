@@ -19,3 +19,5 @@ common in redstoning.
 
 NOTE: The order of arguments does not matter apart from `count` and `spacing`.
 
+# Building
+`gradle build` or `./gradlew build`
