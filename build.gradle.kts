@@ -27,13 +27,18 @@ repositories {
         name = "aikar"
         url = uri("https://repo.aikar.co/content/groups/aikar/")
     }
+    maven {
+        name = "codemc-repo"
+        url = uri("https://repo.codemc.org/repository/maven-public/")
+    }
 }
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation(group = "co.aikar", name = "acf-paper", version = "0.5.0-SNAPSHOT")
 
-    compileOnly(group = "org.spigotmc", name = "spigot-api", version = "1.14.4-R0.1-SNAPSHOT")
+    compileOnly(group = "de.tr7zw", name = "item-nbt-api-plugin", version = "2.2.0")
+    compileOnly(group = "org.spigotmc", name = "spigot-api", version = "1.15.2-R0.1-SNAPSHOT")
     compileOnly(group = "com.sk89q.worldedit", name = "worldedit-bukkit", version = "7.1.0-SNAPSHOT")
 
     kapt(group = "org.spigotmc", name = "plugin-annotations", version = "1.2.2-SNAPSHOT")
@@ -45,6 +50,7 @@ tasks.shadowJar {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.javaParameters = true
 }
 
 tasks.build {

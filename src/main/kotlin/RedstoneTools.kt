@@ -12,8 +12,12 @@ class RedstoneTools : JavaPlugin() {
             logger.severe("Disabled.")
             return
         }
-        val commandManager = PaperCommandManager(this)
         val rstack = RStack(wePlugin.worldEdit)
-        commandManager.registerCommand(rstack)
+        val container = Container()
+        PaperCommandManager(this).apply {
+            registerCommand(rstack)
+            registerCommand(container)
+            commandCompletions.registerCompletion("containers", ContainerCompletionHandler())
+        }
     }
 }

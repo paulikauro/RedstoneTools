@@ -19,5 +19,12 @@ common in redstoning.
 
 NOTE: The order of arguments does not matter apart from `count` and `spacing`.
 
+## `/container`
+Gives the player a chest, barrel, hopper, or furnace with the proper amount of items to provide a signal strength of specified power.
+
+Usage: `/container [type] [power]`
+- `type`: a container of type `chest`, `barrel`, `hopper`, or `furnace`.
+- `power`: an integer of range `0` through `15`. 
+
 # Building
 `gradle build` or `./gradlew build`
