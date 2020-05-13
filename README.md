@@ -26,5 +26,11 @@ Usage: `/container [type] [power]`
 - `type`: a container of type `chest`, `barrel`, `hopper`, or `furnace`.
 - `power`: an integer of range `0` through `15`. 
 
+## `/slab`
+Gives the player an upside-down slab of specified type
+
+Usage: `/slab [type]`
+- `type`: a type of slab
+
 # Building
 `gradle build` or `./gradlew build`
