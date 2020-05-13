@@ -20,15 +20,14 @@ class Container : BaseCommand() {
     // also missing -parameters in build.gradle.kts which wrecks things
     @Syntax("[type] [power]")
     @CommandCompletion("@containers @range:0-15")
-    fun rstack(
+    fun container(
             player: Player,
             args: Array<String>
     ) {
-        val power = args[1].toIntOrNull()
-        if (power == null || power !in 0..15) {
+        val power = args[1].toIntOrNull() ?: return
+        if (power !in 0..15) {
             return
         }
-
         when (args[0]) {
             "furnace" -> player.inventory.addItem(getContainer(Material.FURNACE, power))
             "chest" -> player.inventory.addItem(getContainer(Material.CHEST, power))
@@ -47,9 +46,9 @@ class Container : BaseCommand() {
             else -> 0
         }
         val itemStack = ItemStack(material, 1)
-        itemStack.itemMeta = getModifiedLore(itemStack.itemMeta, power)
+        itemStack.itemMeta = itemStack.itemMeta?.modifyLore(power)
         val nbti = NBTItem(itemStack)
-        setEnchantment(nbti)
+        setFakeEnchant(nbti)
         addItemsToNbt(power, slots, nbti)
         return nbti.item
     }
@@ -80,19 +79,10 @@ class Container : BaseCommand() {
         return ceil((32 * available * power ) / 7.toFloat() - 1).toInt()
     }
 
-    private fun getModifiedLore(meta: ItemMeta?, power: Int) : ItemMeta? {
-        meta?.setDisplayName(power.toString())
-        meta?.lore = listOf("Power $power")
-        return meta
-    }
-
-    private fun setEnchantment(nbti: NBTItem) {
-        nbti.addCompound("Enchantments")
-        val enchantments = nbti.getCompoundList("Enchantments")
-        val enchantmentCompound = enchantments.addCompound()
-        enchantmentCompound.setString("id", "minecraft:knockback")
-        enchantmentCompound.setShort("lvl", 1.toShort())
-        nbti.setInteger("HideFlags", 1)
+    private fun ItemMeta.modifyLore(power: Int) : ItemMeta {
+        this.setDisplayName(power.toString())
+        this.lore = listOf("Power $power")
+        return this
     }
 }
 

@@ -14,10 +14,13 @@ class RedstoneTools : JavaPlugin() {
         }
         val rstack = RStack(wePlugin.worldEdit)
         val container = Container()
+        val slab = Slab()
         PaperCommandManager(this).apply {
             registerCommand(rstack)
             registerCommand(container)
+            registerCommand(slab)
             commandCompletions.registerCompletion("containers", ContainerCompletionHandler())
+            commandCompletions.registerCompletion("slabs", SlabCompletionHandler())
         }
     }
 }
