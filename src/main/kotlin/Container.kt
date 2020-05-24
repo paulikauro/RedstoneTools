@@ -8,6 +8,7 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 import kotlin.math.ceil
+import kotlin.math.max
 
 @CommandAlias("container")
 @Description("Container fetching command")
@@ -50,15 +51,11 @@ class Container : BaseCommand() {
         val compound = getCompound("BlockEntityTag")
         val itemList = compound.getCompoundList("Items")
         for (i in 1..(itemsNeeded / 64.toFloat() + 1).toInt()) {
-            val count = if (itemsNeeded < 64) {
-                itemsNeeded.toByte()
-            } else {
-                64.toByte()
+            itemList.addCompound().apply {
+                setByte("Count", max(itemsNeeded, 64).toByte())
+                setString("id", "minecraft:redstone")
+                setByte("Slot", (i - 1).toByte())
             }
-            val localCompound = itemList.addCompound()
-            localCompound.setByte("Count", count)
-            localCompound.setString("id", "minecraft:redstone")
-            localCompound.setByte("Slot", (i - 1).toByte())
             itemsNeeded -= 64
         }
     }
