@@ -10,14 +10,12 @@ import org.bukkit.block.data.type.Slab
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.BlockDataMeta
-import org.bukkit.inventory.meta.ItemMeta
 
 @CommandAlias("slab")
 @Description("Slab fetching command")
 @CommandPermission("redstonetools.slab")
 class Slab : BaseCommand() {
     @Default
-    @Syntax("[type]")
     @CommandCompletion("@slabs")
     fun slab(
             player: Player,
@@ -35,24 +33,18 @@ class Slab : BaseCommand() {
 
     private fun getSlab(type: String) : ItemStack? {
         val material = Material.getMaterial(type.toUpperCase()) ?: return null
-        val itemStack = ItemStack(material, 1)
-        val itemMeta = itemStack.itemMeta as BlockDataMeta
         val blockData = material.createBlockData() as? Slab ?: return null
+        val itemStack = ItemStack(material, 1)
         blockData.type = Slab.Type.TOP
-        itemMeta.setBlockData(blockData)
-        itemMeta.modifyLore()
-        itemStack.itemMeta = itemMeta
-        val nbti = NBTItem(itemStack)
-        setFakeEnchant(nbti)
-        return nbti.item
+        itemStack.modifyMeta<BlockDataMeta> {
+            setBlockData(blockData)
+            setDisplayName("Upside Down Slab")
+            lore = listOf("UpsiDownORE")
+        }
+        return NBTItem(itemStack).apply {
+            addFakeEnchant()
+        }.item
     }
-
-    private fun ItemMeta.modifyLore(): ItemMeta {
-        this.setDisplayName("Upside Down Slab")
-        this.lore = listOf("UpsiDownORE")
-        return this
-    }
-
 }
 
 class SlabCompletionHandler :

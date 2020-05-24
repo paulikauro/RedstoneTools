@@ -49,8 +49,11 @@ tasks.shadowJar {
 }
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
-    kotlinOptions.javaParameters = true
+    kotlinOptions {
+        jvmTarget = "1.8"
+        javaParameters = true
+        freeCompilerArgs = listOf("-Xinline-classes")
+    }
 }
 
 tasks.build {
