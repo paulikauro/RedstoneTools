@@ -13,9 +13,11 @@ class RedstoneTools : JavaPlugin() {
             logger.severe("Disabled.")
             return
         }
+        val worldEdit = wePlugin.worldEdit
+        server.pluginManager.registerEvents(WorldEditHelper(this, worldEdit), this)
         PaperCommandManager(this).apply {
             registerCommands(
-                RStack(wePlugin.worldEdit),
+                RStack(worldEdit),
                 Container(),
                 Slab()
             )

@@ -52,7 +52,7 @@ tasks.withType<KotlinCompile> {
     kotlinOptions {
         jvmTarget = "1.8"
         javaParameters = true
-        freeCompilerArgs = listOf("-Xinline-classes")
+        freeCompilerArgs = listOf("-Xinline-classes", "-XXLanguage:+NewInference" , "-Xopt-in=kotlin.ExperimentalStdlibApi")
     }
 }
 
