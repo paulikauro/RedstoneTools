@@ -2,10 +2,31 @@ package redstonetools
 
 import co.aikar.commands.*
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
+import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.plugin.java.JavaPlugin
+import java.lang.Exception
+import java.util.logging.Level
 
 class RedstoneTools : JavaPlugin() {
+
+    private fun handleCommandException(
+            command: BaseCommand,
+            registeredCommand: RegisteredCommand<*>,
+            sender: CommandIssuer,
+            args: List<String>,
+            throwable: Throwable
+    ): Boolean {
+        val exception = throwable as? RedstoneToolsException
+        if (exception == null) {
+            logger.log(Level.SEVERE, "Error in ACF", throwable)
+            return false
+        }
+        val message = exception.message ?: "Something went wrong."
+        sender.sendMessage("${ChatColor.DARK_GRAY}[${ChatColor.GRAY}RedstoneTools${ChatColor.DARK_GRAY}]${ChatColor.GRAY} $message")
+        return true
+    }
+
     override fun onEnable() {
         val wePlugin = server.pluginManager.getPlugin("WorldEdit")
         if (wePlugin !is WorldEditPlugin) {
@@ -24,9 +45,12 @@ class RedstoneTools : JavaPlugin() {
             commandCompletions.registerCompletion("slabs", SlabCompletionHandler())
             registerThing("Signal strength", SignalStrength::of, SignalStrength.values)
             registerThing("Container", SignalContainer::of, SignalContainer.values)
+            setDefaultExceptionHandler(::handleCommandException, false)
         }
     }
 }
+
+class RedstoneToolsException(message: String) : Exception(message)
 
 private fun PaperCommandManager.registerCommands(vararg commands: BaseCommand) =
     commands.forEach(::registerCommand)
@@ -36,7 +60,7 @@ inline fun <reified T> PaperCommandManager.registerThing(
     crossinline create: (String) -> T?,
     values: List<String>
 ) {
-    val name = readableName.replace(" ", "").toLowerCase()
+    val name = readableName.replace(" ", "_").toLowerCase()
     val errorMessage = "$readableName must be one of $values"
     commandContexts.registerContext(T::class.java) { context ->
         create(context.popFirstArg()) ?: throw InvalidCommandArgument(errorMessage)

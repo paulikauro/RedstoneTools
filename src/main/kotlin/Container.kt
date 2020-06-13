@@ -15,6 +15,7 @@ import kotlin.math.max
 @CommandPermission("redstonetools.container")
 class Container : BaseCommand() {
     @Default
+    @CommandCompletion("@container @signal_strength")
     @Syntax("[type] [power]")
     fun container(
         player: Player,

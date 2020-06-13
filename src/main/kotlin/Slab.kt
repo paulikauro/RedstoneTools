@@ -21,18 +21,23 @@ class Slab : BaseCommand() {
             player: Player,
             args: Array<String>
     ) {
-        val slab: ItemStack
-        if (args.isEmpty()) {
-            slab = getSlab(player.inventory.itemInMainHand.type.name) ?: return
-            player.inventory.setItemInMainHand(slab)
-        } else {
-            slab = getSlab(args[0]) ?: return
+        val slab: ItemStack?
+        if (args.isNotEmpty()) {
+            slab = getSlab(args[0]) ?: throw RedstoneToolsException("Invalid slab type specified.")
             player.inventory.addItem(slab)
+        } else {
+            slab = getSlab(player.inventory.itemInMainHand.type.name)
+            if (slab != null) {
+                player.inventory.setItemInMainHand(slab)
+            } else {
+                player.inventory.addItem(getSlab(Material.SMOOTH_STONE_SLAB.toString()))
+            }
         }
     }
 
     private fun getSlab(type: String) : ItemStack? {
         val material = Material.getMaterial(type.toUpperCase()) ?: return null
+        if (!material.isBlock) return null
         val blockData = material.createBlockData() as? Slab ?: return null
         val itemStack = ItemStack(material, 1)
         blockData.type = Slab.Type.TOP
@@ -51,5 +56,9 @@ class SlabCompletionHandler :
         CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext>
 {
     override fun getCompletions(context: BukkitCommandCompletionContext?): MutableCollection<String> =
-        Material.values().filter { it.isBlock && (it.createBlockData() is Slab) }.map { it.toString().toLowerCase() }.toMutableList()
+        Material.values().filter {
+            it.isBlock && (it.createBlockData() is Slab)
+        }.map {
+            it.toString().toLowerCase()
+        }.toMutableList()
 }
