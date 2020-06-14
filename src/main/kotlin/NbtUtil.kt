@@ -14,6 +14,8 @@ fun NBTItem.addFakeEnchant() {
     setInteger("HideFlags", 1)
 }
 
+// 😎
+@Suppress("UNCHECKED_CAST")
 inline fun <T: ItemMeta> ItemStack.modifyMeta(action: T.() -> Unit) {
     itemMeta = (itemMeta as T).apply(action)
 }

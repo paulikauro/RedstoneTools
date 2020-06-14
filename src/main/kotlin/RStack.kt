@@ -72,6 +72,7 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
     private fun doStack(player: WEPlayer, count: Int, spacing: Int, expand: Boolean, direction: String): Int {
         val session = worldEdit.sessionManager.get(player)
         val selection = try {
+            // TODO: null check session.selectionWorld
             session.getSelection(session.selectionWorld)
         } catch (e: IncompleteRegionException) {
             throw ConditionFailedException("You do not have a selection!")

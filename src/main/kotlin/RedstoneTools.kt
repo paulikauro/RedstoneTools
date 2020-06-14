@@ -37,15 +37,15 @@ class RedstoneTools : JavaPlugin() {
         val worldEdit = wePlugin.worldEdit
         server.pluginManager.registerEvents(WorldEditHelper(this, worldEdit), this)
         PaperCommandManager(this).apply {
+            commandCompletions.registerCompletion("slabs", SlabCompletionHandler())
+            registerThing<SignalStrength>("Signal strength", { SignalStrength.of(it) }, SignalStrength.values)
+            registerThing<SignalContainer>("Container", { SignalContainer.of(it) }, SignalContainer.values)
+            setDefaultExceptionHandler(::handleCommandException, false)
             registerCommands(
                 RStack(worldEdit),
                 Container(),
                 Slab()
             )
-            commandCompletions.registerCompletion("slabs", SlabCompletionHandler())
-            registerThing("Signal strength", SignalStrength::of, SignalStrength.values)
-            registerThing("Container", SignalContainer::of, SignalContainer.values)
-            setDefaultExceptionHandler(::handleCommandException, false)
         }
     }
 }
@@ -69,7 +69,7 @@ inline fun <reified T> PaperCommandManager.registerThing(
     commandCompletions.setDefaultCompletion(name, T::class.java)
 }
 
-inline class SignalStrength(val value: Int) {
+class SignalStrength(val value: Int) {
     companion object {
         fun of(arg: String): SignalStrength? = when (arg) {
             in hexValues -> SignalStrength(arg.toInt(16))
@@ -82,7 +82,7 @@ inline class SignalStrength(val value: Int) {
     }
 }
 
-inline class SignalContainer(val material: Material) {
+class SignalContainer(val material: Material) {
     companion object {
         // Not a map [yet] cuz we want shortcuts
         // maybe possible to just check first letter (like WorldEdit does with directions)
