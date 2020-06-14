@@ -38,11 +38,14 @@ class RedstoneTools : JavaPlugin() {
         server.pluginManager.registerEvents(WorldEditHelper(this, worldEdit), this)
         PaperCommandManager(this).apply {
             commandCompletions.registerCompletion("slabs", SlabCompletionHandler())
+            commandCompletions.registerCompletion("find_mask", FindCompletionHandler(worldEdit))
+            commandCompletions.registerCompletion("find_page", FindPageCompletionHandler())
             registerThing<SignalStrength>("Signal strength", { SignalStrength.of(it) }, SignalStrength.values)
             registerThing<SignalContainer>("Container", { SignalContainer.of(it) }, SignalContainer.values)
             setDefaultExceptionHandler(::handleCommandException, false)
             registerCommands(
                 RStack(worldEdit),
+                Find(worldEdit),
                 Container(),
                 Slab()
             )
