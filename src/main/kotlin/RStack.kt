@@ -32,8 +32,8 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
     @Default
     @Syntax("[-e] [direction] [count] [spacing]")
     fun rstack(
-            player: Player,
-            args: Array<String>
+        player: Player,
+        args: Array<String>
     ) {
         var expand = false
         var direction: String? = null
@@ -129,17 +129,17 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         // diagonal direction, need to add the y-component
         // negative pitch is upwards
         return vec.add(
-                if (pitch < 0) {
-                    Direction.UP
-                } else {
-                    Direction.DOWN
-                }.toBlockVector()
+            if (pitch < 0) {
+                Direction.UP
+            } else {
+                Direction.DOWN
+            }.toBlockVector()
         )
     }
 
     private fun isDiagDirStr(direction: String, upOrDown: Char) =
-            // check length, because 'd' and 'u' alone are not diagonal directions (they're just up or down)
-            direction.length > 1 && direction.last().toLowerCase() == upOrDown
+        // check length, because 'd' and 'u' alone are not diagonal directions (they're just up or down)
+        direction.length > 1 && direction.last().toLowerCase() == upOrDown
 }
 
 private fun <E> List<E>.getOrDefault(index: Int, default: E): E = getOrNull(index) ?: default

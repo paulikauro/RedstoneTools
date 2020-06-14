@@ -23,8 +23,7 @@ import com.sk89q.worldedit.util.formatting.text.event.HoverEvent
 import com.sk89q.worldedit.util.formatting.text.format.TextColor
 import org.bukkit.ChatColor
 import org.bukkit.entity.Player
-import java.lang.IllegalArgumentException
-import java.util.UUID
+import java.util.*
 import kotlin.collections.HashMap
 import kotlin.math.ceil
 
@@ -88,9 +87,8 @@ class Find(private val worldEdit: WorldEdit) : BaseCommand() {
     }
 }
 
-class FindPaginationBox(private val locations: MutableList<BlockVector3>, title: String, command: String):
-        PaginationBox("${ChatColor.LIGHT_PURPLE}$title", command)
-{
+class FindPaginationBox(private val locations: MutableList<BlockVector3>, title: String, command: String) :
+    PaginationBox("${ChatColor.LIGHT_PURPLE}$title", command) {
     override fun getComponent(number: Int): Component {
         if (number > locations.size) throw IllegalArgumentException("Invalid location index.")
         return TextComponent.of("${number}: ${locations[number]}")
@@ -98,22 +96,21 @@ class FindPaginationBox(private val locations: MutableList<BlockVector3>, title:
             .clickEvent(ClickEvent.runCommand("/tp ${locations[number].x} ${locations[number].y} ${locations[number].z}"))
             .hoverEvent(HoverEvent.showText(TextComponent.of("Click to teleport")))
     }
+
     override fun getComponentsSize(): Int = locations.size
 }
 
-class FindPageCompletionHandler:
-        CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext>
-{
+class FindPageCompletionHandler :
+    CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
     override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> {
         val player = context.sender as Player
         val locations = findResults[player.uniqueId] ?: return emptyList()
-        return (1..ceil(locations.size/8f).toInt()).map { it.toString() }.toList()
+        return (1..ceil(locations.size / 8f).toInt()).map { it.toString() }.toList()
     }
 }
 
-class FindCompletionHandler(worldEdit: WorldEdit):
-        CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext>
-{
+class FindCompletionHandler(worldEdit: WorldEdit) :
+    CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
     private val maskFactory = MaskFactory(worldEdit)
     override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> {
         return maskFactory.getSuggestions(context.input)

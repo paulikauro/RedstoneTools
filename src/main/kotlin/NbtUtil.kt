@@ -16,6 +16,6 @@ fun NBTItem.addFakeEnchant() {
 
 // 😎
 @Suppress("UNCHECKED_CAST")
-inline fun <T: ItemMeta> ItemStack.modifyMeta(action: T.() -> Unit) {
+inline fun <T : ItemMeta> ItemStack.modifyMeta(action: T.() -> Unit) {
     itemMeta = (itemMeta as T).apply(action)
 }

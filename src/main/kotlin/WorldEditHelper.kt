@@ -62,9 +62,9 @@ class WorldEditHelper(plugin: JavaPlugin, private val worldEdit: WorldEdit) : Li
         }
         player.scoreboard = Bukkit.getScoreboardManager()!!.newScoreboard.apply {
             registerNewObjective(
-                    Random.nextInt(1234567890).toString(),
-                    "dummy",
-                    "Current selection"
+                Random.nextInt(1234567890).toString(),
+                "dummy",
+                "Current selection"
             ).apply {
                 displaySlot = DisplaySlot.SIDEBAR
                 displayName = "${RED}Current Selection"

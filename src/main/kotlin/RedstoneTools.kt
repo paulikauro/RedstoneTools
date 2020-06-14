@@ -5,17 +5,16 @@ import com.sk89q.worldedit.bukkit.WorldEditPlugin
 import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.plugin.java.JavaPlugin
-import java.lang.Exception
 import java.util.logging.Level
 
 class RedstoneTools : JavaPlugin() {
 
     private fun handleCommandException(
-            command: BaseCommand,
-            registeredCommand: RegisteredCommand<*>,
-            sender: CommandIssuer,
-            args: List<String>,
-            throwable: Throwable
+        command: BaseCommand,
+        registeredCommand: RegisteredCommand<*>,
+        sender: CommandIssuer,
+        args: List<String>,
+        throwable: Throwable
     ): Boolean {
         val exception = throwable as? RedstoneToolsException
         if (exception == null) {
@@ -79,6 +78,7 @@ class SignalStrength(val value: Int) {
             in intValues -> SignalStrength(arg.toInt())
             else -> null
         }
+
         private val intValues = (0..15).map(Int::toString)
         private val hexValues = ('a'..'f').map(Char::toString)
         val values = intValues + hexValues
