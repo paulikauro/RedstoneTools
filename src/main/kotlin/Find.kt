@@ -15,28 +15,19 @@ import com.sk89q.worldedit.function.operation.Operations
 import com.sk89q.worldedit.function.visitor.RegionVisitor
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.util.formatting.component.InvalidComponentException
-import com.sk89q.worldedit.util.formatting.component.PaginationBox
-import com.sk89q.worldedit.util.formatting.text.Component
-import com.sk89q.worldedit.util.formatting.text.TextComponent
-import com.sk89q.worldedit.util.formatting.text.event.ClickEvent
-import com.sk89q.worldedit.util.formatting.text.event.HoverEvent
-import com.sk89q.worldedit.util.formatting.text.format.TextColor
-import org.bukkit.ChatColor
 import org.bukkit.entity.Player
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.math.ceil
 
 val findResults = HashMap<UUID, MutableList<BlockVector3>>()
-const val MAKE_SELECTION_FIRST = "Make a region selection first."
 
 @CommandAlias("/find")
 @Description("Find some shid in selecton")
 @CommandPermission("redstonetools.find")
 class Find(private val worldEdit: WorldEdit) : BaseCommand() {
-
     @Default
-    @CommandCompletion("@find_mask")
+    @CommandCompletion("@we_mask")
     @Syntax("[material]")
     fun find(
         player: Player,
@@ -45,7 +36,7 @@ class Find(private val worldEdit: WorldEdit) : BaseCommand() {
         doFind(BukkitAdapter.adapt(player), arg)
     }
 
-    @Subcommand("page")
+    @Subcommand("-p")
     @CommandCompletion("@find_page")
     @Syntax("[number]")
     fun page(
@@ -53,7 +44,7 @@ class Find(private val worldEdit: WorldEdit) : BaseCommand() {
         page: Int
     ) {
         val locations = findResults[player.uniqueId] ?: throw RedstoneToolsException(MAKE_SELECTION_FIRST)
-        val paginationBox = FindPaginationBox(locations, "Results", "//find page %page%")
+        val paginationBox = LocationsPaginationBox(locations, "Find Results", "//find -p %page%")
         val component = try {
             paginationBox.create(page)
         } catch (e: InvalidComponentException) {
@@ -87,32 +78,11 @@ class Find(private val worldEdit: WorldEdit) : BaseCommand() {
     }
 }
 
-class FindPaginationBox(private val locations: MutableList<BlockVector3>, title: String, command: String) :
-    PaginationBox("${ChatColor.LIGHT_PURPLE}$title", command) {
-    override fun getComponent(number: Int): Component {
-        if (number > locations.size) throw IllegalArgumentException("Invalid location index.")
-        return TextComponent.of("${number}: ${locations[number]}")
-            .color(TextColor.LIGHT_PURPLE)
-            .clickEvent(ClickEvent.runCommand("/tp ${locations[number].x} ${locations[number].y} ${locations[number].z}"))
-            .hoverEvent(HoverEvent.showText(TextComponent.of("Click to teleport")))
-    }
-
-    override fun getComponentsSize(): Int = locations.size
-}
-
 class FindPageCompletionHandler :
     CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
     override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> {
         val player = context.sender as Player
         val locations = findResults[player.uniqueId] ?: return emptyList()
-        return (1..ceil(locations.size / 8f).toInt()).map { it.toString() }.toList()
-    }
-}
-
-class FindCompletionHandler(worldEdit: WorldEdit) :
-    CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
-    private val maskFactory = MaskFactory(worldEdit)
-    override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> {
-        return maskFactory.getSuggestions(context.input)
+        return (1..ceil(locations.size / 7f).toInt()).map { it.toString() }.toList()
     }
 }

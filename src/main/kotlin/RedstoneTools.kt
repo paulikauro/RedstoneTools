@@ -1,11 +1,22 @@
 package redstonetools
 
 import co.aikar.commands.*
+import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
+import com.sk89q.worldedit.extension.factory.MaskFactory
+import com.sk89q.worldedit.math.BlockVector3
+import com.sk89q.worldedit.util.formatting.component.PaginationBox
+import com.sk89q.worldedit.util.formatting.text.Component
+import com.sk89q.worldedit.util.formatting.text.TextComponent
+import com.sk89q.worldedit.util.formatting.text.event.ClickEvent
+import com.sk89q.worldedit.util.formatting.text.event.HoverEvent
+import com.sk89q.worldedit.util.formatting.text.format.TextColor
 import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.logging.Level
+
+const val MAKE_SELECTION_FIRST = "Make a region selection first."
 
 class RedstoneTools : JavaPlugin() {
 
@@ -37,14 +48,16 @@ class RedstoneTools : JavaPlugin() {
         server.pluginManager.registerEvents(WorldEditHelper(this, worldEdit), this)
         PaperCommandManager(this).apply {
             commandCompletions.registerCompletion("slabs", SlabCompletionHandler())
-            commandCompletions.registerCompletion("find_mask", FindCompletionHandler(worldEdit))
+            commandCompletions.registerCompletion("we_mask", MaskCompletionHandler(worldEdit))
             commandCompletions.registerCompletion("find_page", FindPageCompletionHandler())
+            commandCompletions.registerCompletion("search_page", SearchPageCompletionHandler())
             registerThing<SignalStrength>("Signal strength", { SignalStrength.of(it) }, SignalStrength.values)
             registerThing<SignalContainer>("Container", { SignalContainer.of(it) }, SignalContainer.values)
             setDefaultExceptionHandler(::handleCommandException, false)
             registerCommands(
                 RStack(worldEdit),
                 Find(worldEdit),
+                SignSearch(worldEdit),
                 Container(),
                 Slab()
             )
@@ -106,5 +119,37 @@ class SignalContainer(val material: Material) {
             }
             return null
         }
+    }
+}
+
+class MaskCompletionHandler(worldEdit: WorldEdit) :
+    CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
+    private val maskFactory = MaskFactory(worldEdit)
+    override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> {
+        return maskFactory.getSuggestions(context.input)
+    }
+}
+
+class LocationsPaginationBox(private val locations: MutableList<BlockVector3>, title: String, command: String) :
+    PaginationBox("${ChatColor.LIGHT_PURPLE}$title", command) {
+
+    init {
+        setComponentsPerPage(7)
+    }
+
+    override fun getComponent(number: Int): Component {
+        if (number > locations.size) throw IllegalArgumentException("Invalid location index.")
+        return TextComponent.of("${number+1}: ${locations[number]}")
+            .color(TextColor.LIGHT_PURPLE)
+            .clickEvent(ClickEvent.runCommand("/tp ${locations[number].x} ${locations[number].y} ${locations[number].z}"))
+            .hoverEvent(HoverEvent.showText(TextComponent.of("Click to teleport")))
+    }
+
+    override fun getComponentsSize(): Int = locations.size
+
+    override fun create(page: Int): Component {
+        super.getContents().append(TextComponent.of("Total Results: ${locations.size}").color(TextColor.GRAY))
+            .append(TextComponent.newline())
+        return super.create(page)
     }
 }

@@ -19,8 +19,11 @@ common in redstoning.
 
 NOTE: The order of arguments does not matter apart from `count` and `spacing`.
 
-## `//find`
+## `//find [mask]`
 Search a selected region for a specific WorldEdit material mask.
+
+## `//signsearch|//ss [regex]`
+Search a selected region for signs that match a provided regex.
 
 ## `/container`
 Gives the player a chest, barrel, hopper, or furnace with the proper amount of items to provide a signal strength of specified power.
