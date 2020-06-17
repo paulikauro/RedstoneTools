@@ -13,14 +13,14 @@ import com.sk89q.worldedit.function.RegionFunction
 import com.sk89q.worldedit.function.RegionMaskingFilter
 import com.sk89q.worldedit.function.operation.Operations
 import com.sk89q.worldedit.function.visitor.RegionVisitor
-import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.util.formatting.component.InvalidComponentException
+import com.sk89q.worldedit.util.formatting.text.TextComponent
 import org.bukkit.entity.Player
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.math.ceil
 
-val findResults = HashMap<UUID, MutableList<BlockVector3>>()
+val findResults = HashMap<UUID, MutableList<LocationContainer>>()
 
 @CommandAlias("/find")
 @Description("Find some shid in selecton")
@@ -60,21 +60,26 @@ class Find(private val worldEdit: WorldEdit) : BaseCommand() {
         } catch (e: IncompleteRegionException) {
             throw RedstoneToolsException(MAKE_SELECTION_FIRST)
         }
-        val locations = mutableListOf<BlockVector3>()
+        val locations = mutableListOf<LocationContainer>()
         val maskFactory = MaskFactory(worldEdit)
         val parserContext = ParserContext().apply {
             extent = session.selectionWorld
         }
         val blockMask = maskFactory.parseFromInput(arg, parserContext)
         val regionFunction = RegionFunction { position ->
-            locations.add(position)
+            locations.add(LocationContainer(position, TextComponent.of(position.toString())))
             false
         }
         val regionMaskingFilter = RegionMaskingFilter(blockMask, regionFunction)
         val regionVisitor = RegionVisitor(selection, regionMaskingFilter)
         Operations.complete(regionVisitor)
-        findResults[player.uniqueId] = locations
-        page(BukkitAdapter.adapt(player), 1)
+        if (locations.isNotEmpty()) {
+            findResults[player.uniqueId] = locations
+            page(BukkitAdapter.adapt(player), 1)
+        } else {
+            findResults.remove(player.uniqueId)
+            player.printInfo(TextComponent.of("No results found."))
+        }
     }
 }
 

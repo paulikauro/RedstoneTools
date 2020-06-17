@@ -2,6 +2,7 @@ package redstonetools
 
 import co.aikar.commands.*
 import com.sk89q.worldedit.WorldEdit
+import com.sk89q.worldedit.WorldEditException
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
 import com.sk89q.worldedit.extension.factory.MaskFactory
 import com.sk89q.worldedit.math.BlockVector3
@@ -27,14 +28,17 @@ class RedstoneTools : JavaPlugin() {
         args: List<String>,
         throwable: Throwable
     ): Boolean {
-        val exception = throwable as? RedstoneToolsException
-        if (exception == null) {
-            logger.log(Level.SEVERE, "Error in ACF", throwable)
-            return false
+        return when (throwable) {
+            is RedstoneToolsException, is WorldEditException -> {
+                val message = throwable.message ?: "Something went wrong."
+                sender.sendMessage("${ChatColor.DARK_GRAY}[${ChatColor.GRAY}RedstoneTools${ChatColor.DARK_GRAY}]${ChatColor.GRAY} $message")
+                true
+            }
+            else -> {
+                logger.log(Level.SEVERE, "Error in ACF", throwable)
+                false
+            }
         }
-        val message = exception.message ?: "Something went wrong."
-        sender.sendMessage("${ChatColor.DARK_GRAY}[${ChatColor.GRAY}RedstoneTools${ChatColor.DARK_GRAY}]${ChatColor.GRAY} $message")
-        return true
     }
 
     override fun onEnable() {
@@ -130,7 +134,9 @@ class MaskCompletionHandler(worldEdit: WorldEdit) :
     }
 }
 
-class LocationsPaginationBox(private val locations: MutableList<BlockVector3>, title: String, command: String) :
+data class LocationContainer(val location: BlockVector3, val match: TextComponent)
+
+class LocationsPaginationBox(private val locations: MutableList<LocationContainer>, title: String, command: String) :
     PaginationBox("${ChatColor.LIGHT_PURPLE}$title", command) {
 
     init {
@@ -139,9 +145,13 @@ class LocationsPaginationBox(private val locations: MutableList<BlockVector3>, t
 
     override fun getComponent(number: Int): Component {
         if (number > locations.size) throw IllegalArgumentException("Invalid location index.")
-        return TextComponent.of("${number+1}: ${locations[number]}")
+        return TextComponent.of("${number+1}: ")
+            .append(locations[number].match)
             .color(TextColor.LIGHT_PURPLE)
-            .clickEvent(ClickEvent.runCommand("/tp ${locations[number].x} ${locations[number].y} ${locations[number].z}"))
+            .clickEvent(ClickEvent.runCommand("/tp" +
+                " ${locations[number].location.x}" +
+                " ${locations[number].location.y}" +
+                " ${locations[number].location.z}"))
             .hoverEvent(HoverEvent.showText(TextComponent.of("Click to teleport")))
     }
 

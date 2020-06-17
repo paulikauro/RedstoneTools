@@ -13,17 +13,19 @@ import com.sk89q.worldedit.function.RegionMaskingFilter
 import com.sk89q.worldedit.function.mask.BlockCategoryMask
 import com.sk89q.worldedit.function.operation.Operations
 import com.sk89q.worldedit.function.visitor.RegionVisitor
-import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.util.formatting.component.InvalidComponentException
 import com.sk89q.worldedit.util.formatting.text.TextComponent
+import com.sk89q.worldedit.util.formatting.text.event.HoverEvent
+import com.sk89q.worldedit.util.formatting.text.format.TextColor
 import com.sk89q.worldedit.util.formatting.text.serializer.gson.GsonComponentSerializer
+import com.sk89q.worldedit.world.block.BaseBlock
 import com.sk89q.worldedit.world.block.BlockCategories
 import org.bukkit.entity.Player
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.math.ceil
 
-val searchResults = HashMap<UUID, MutableList<BlockVector3>>()
+val searchResults = HashMap<UUID, MutableList<LocationContainer>>()
 
 @CommandAlias("/signsearch|/ss")
 @Description("Search for text of signs within a selection using a regular expression")
@@ -45,8 +47,8 @@ class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
         player: Player,
         page: Int
     ) {
-        val locations = searchResults[player.uniqueId] ?: throw RedstoneToolsException(MAKE_SELECTION_FIRST)
-        val paginationBox = LocationsPaginationBox(locations, "Search Results", "//signsearch -p %page%")
+        val results = searchResults[player.uniqueId] ?: throw RedstoneToolsException(MAKE_SELECTION_FIRST)
+        val paginationBox = LocationsPaginationBox(results, "Search Results", "//signsearch -p %page%")
         val component = try {
             paginationBox.create(page)
         } catch (e: InvalidComponentException) {
@@ -67,34 +69,57 @@ class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
         } catch (e: IncompleteRegionException) {
             throw RedstoneToolsException(MAKE_SELECTION_FIRST)
         }
-        val matches = mutableListOf<BlockVector3>()
+        val matchMap = mutableListOf<LocationContainer>()
         val blockMask = BlockCategoryMask(session.selectionWorld, BlockCategories.SIGNS)
         val regionFunction = RegionFunction { position ->
             val baseBlock = session.selectionWorld.getFullBlock(position)
-            if (baseBlock.hasNbtData()) {
-                val compoundTag = baseBlock.nbtData!!
-                val content = buildString {
-                    for (i in 1..4) {
-                        val textTag = compoundTag.value["Text$i"] as StringTag
-                        val component = GsonComponentSerializer.INSTANCE.deserialize(textTag.value) as TextComponent
-                        append(component.getAllContent())
-                    }
-                }
-                if (content.contains(pattern)) {
-                    matches.add(position)
-                }
+            val parsedMatch = parseMatch(baseBlock, pattern)
+            if (parsedMatch != null) {
+                matchMap.add(LocationContainer(position, parsedMatch))
             }
             false
         }
         val regionMaskingFilter = RegionMaskingFilter(blockMask, regionFunction)
         val regionVisitor = RegionVisitor(selection, regionMaskingFilter)
         Operations.complete(regionVisitor)
-        if (matches.isNotEmpty()) {
-            searchResults[player.uniqueId] = matches
+        if (matchMap.isNotEmpty()) {
+            searchResults[player.uniqueId] = matchMap
             page(BukkitAdapter.adapt(player), 1)
         } else {
             searchResults.remove(player.uniqueId)
             player.printInfo(TextComponent.of("No results found."))
+        }
+    }
+
+    private fun parseMatch(baseBlock: BaseBlock, pattern: Regex): TextComponent? {
+        if (!baseBlock.hasNbtData()) {
+            return null
+        }
+        val compoundTag = baseBlock.nbtData!!
+        var localMatch: TextComponent? = null
+        buildString {
+            for (i in 1..4) {
+                val textTag = compoundTag.value["Text$i"] as StringTag
+                val component = GsonComponentSerializer.INSTANCE.deserialize(textTag.value) as TextComponent
+                val currentLine = component.getAllContent()
+                append("${currentLine}\n")
+                val localMatches = pattern.find(currentLine)
+                if (localMatches != null) {
+                    localMatch = TextComponent.of("Line $i: ")
+                        .color(TextColor.GRAY)
+                        .append(currentLine.getHighlightedReplacement(localMatches.groupValues.first()))
+                    break
+                }
+            }
+        }.removeSuffix("\n").apply {
+            if (localMatch != null) {
+                return localMatch
+            } else {
+                val match = pattern.find(this) ?: return null
+                return TextComponent.of("Multi-line match")
+                    .color(TextColor.GRAY)
+                    .hoverEvent(HoverEvent.showText(getHighlightedReplacement(match.groupValues.first())))
+            }
         }
     }
 }
