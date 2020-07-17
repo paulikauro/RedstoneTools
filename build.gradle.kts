@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = ""
-version = "1.0-SNAPSHOT"
+version = "1.1"
 
 plugins {
     kotlin("jvm") version "1.3.71"
@@ -37,9 +37,9 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation(group = "co.aikar", name = "acf-paper", version = "0.5.0-SNAPSHOT")
 
-    compileOnly(group = "de.tr7zw", name = "item-nbt-api-plugin", version = "2.2.0")
-    compileOnly(group = "org.spigotmc", name = "spigot-api", version = "1.15.2-R0.1-SNAPSHOT")
-    compileOnly(group = "com.sk89q.worldedit", name = "worldedit-bukkit", version = "7.1.0-SNAPSHOT")
+    compileOnly(group = "de.tr7zw", name = "item-nbt-api-plugin", version = "2.4.1")
+    compileOnly(group = "org.spigotmc", name = "spigot-api", version = "1.16.1-R0.1-SNAPSHOT")
+    compileOnly(group = "com.sk89q.worldedit", name = "worldedit-bukkit", version = "7.2.0-SNAPSHOT")
 
     kapt(group = "org.spigotmc", name = "plugin-annotations", version = "1.2.2-SNAPSHOT")
 }
