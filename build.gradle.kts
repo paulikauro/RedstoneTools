@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = ""
-version = "1.1"
+version = "1.2"
 
 plugins {
     kotlin("jvm") version "1.3.71"
@@ -31,6 +31,9 @@ repositories {
         name = "codemc-repo"
         url = uri("https://repo.codemc.org/repository/maven-public/")
     }
+    maven {
+        url = uri("https://repo.dmulloy2.net/nexus/repository/public/")
+    }
 }
 
 dependencies {
@@ -40,6 +43,7 @@ dependencies {
     compileOnly(group = "de.tr7zw", name = "item-nbt-api-plugin", version = "2.4.1")
     compileOnly(group = "org.spigotmc", name = "spigot-api", version = "1.16.1-R0.1-SNAPSHOT")
     compileOnly(group = "com.sk89q.worldedit", name = "worldedit-bukkit", version = "7.2.0-SNAPSHOT")
+    compileOnly(group = "com.comphenix.protocol", name = "ProtocolLib", version = "4.5.0")
 
     kapt(group = "org.spigotmc", name = "plugin-annotations", version = "1.2.2-SNAPSHOT")
 }

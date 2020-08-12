@@ -25,6 +25,9 @@ Search a selected region for a specific WorldEdit material mask.
 ## `//signsearch|//ss [regex]`
 Search a selected region for signs that match a provided regex.
 
+## `/autowire|/aw`
+When enabled, places redstone wire ontop of solid blocks the user is placing, provided that air is above said block.
+
 ## `/container`
 Gives the player a chest, barrel, hopper, or furnace with the proper amount of items to provide a signal strength of specified power.
 

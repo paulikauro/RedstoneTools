@@ -1,6 +1,7 @@
 package redstonetools
 
 import co.aikar.commands.*
+import com.comphenix.protocol.ProtocolLibrary
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.WorldEditException
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
@@ -15,6 +16,7 @@ import com.sk89q.worldedit.util.formatting.text.format.TextColor
 import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.plugin.java.JavaPlugin
+import java.util.*
 import java.util.logging.Level
 
 const val MAKE_SELECTION_FIRST = "Make a region selection first."
@@ -49,7 +51,10 @@ class RedstoneTools : JavaPlugin() {
             return
         }
         val worldEdit = wePlugin.worldEdit
+        val autos: MutableSet<UUID> = mutableSetOf()
+        val protocolManager = ProtocolLibrary.getProtocolManager()
         server.pluginManager.registerEvents(WorldEditHelper(this, worldEdit), this)
+        server.pluginManager.registerEvents(AutoWireListener(autos), this)
         PaperCommandManager(this).apply {
             commandCompletions.registerCompletion("slabs", SlabCompletionHandler())
             commandCompletions.registerCompletion("we_mask", MaskCompletionHandler(worldEdit))
@@ -63,7 +68,8 @@ class RedstoneTools : JavaPlugin() {
                 Find(worldEdit),
                 SignSearch(worldEdit),
                 Container(),
-                Slab()
+                Slab(),
+                Autowire(autos, protocolManager)
             )
         }
     }
