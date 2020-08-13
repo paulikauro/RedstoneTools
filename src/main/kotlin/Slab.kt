@@ -8,6 +8,9 @@ import de.tr7zw.nbtapi.NBTItem
 import org.bukkit.Material
 import org.bukkit.block.data.type.Slab
 import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
+import org.bukkit.event.Listener
+import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.BlockDataMeta
 
@@ -49,6 +52,22 @@ class Slab : BaseCommand() {
         return NBTItem(itemStack).apply {
             addFakeEnchant()
         }.item
+    }
+}
+
+class SlabListener : Listener {
+    @EventHandler
+    fun onSlabPlace(event: BlockPlaceEvent) {
+        val slabData = event.blockPlaced.blockData as? Slab ?: return
+        if (slabData.type != Slab.Type.TOP) return
+        val existingSlabData = event.blockReplacedState.blockData as? Slab ?: return
+        if (existingSlabData.type != Slab.Type.TOP) return
+        if (event.blockPlaced.location != event.blockReplacedState.location) return
+        event.isCancelled = true
+        val slabLocation = event.blockPlaced.location.add(0.0, -1.0, 0.0)
+        if (slabLocation.block.type != Material.AIR) return
+        slabLocation.block.type = event.blockPlaced.type
+        slabLocation.block.blockData = event.blockPlaced.blockData
     }
 }
 

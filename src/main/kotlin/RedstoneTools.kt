@@ -55,6 +55,7 @@ class RedstoneTools : JavaPlugin() {
         val protocolManager = ProtocolLibrary.getProtocolManager()
         server.pluginManager.registerEvents(WorldEditHelper(this, worldEdit), this)
         server.pluginManager.registerEvents(AutoWireListener(autos), this)
+        server.pluginManager.registerEvents(SlabListener(), this)
         PaperCommandManager(this).apply {
             commandCompletions.registerCompletion("slabs", SlabCompletionHandler())
             commandCompletions.registerCompletion("we_mask", MaskCompletionHandler(worldEdit))
