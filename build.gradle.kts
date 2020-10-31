@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = ""
-version = "1.2.1"
+version = "1.2.2"
 
 plugins {
     val kotlinVersion = "1.4.10"
