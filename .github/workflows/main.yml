@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [ $default-branch ]
+    tags-ignore:
+      - 'v*'
   pull_request:
     branches: [ $default-branch ]
 
