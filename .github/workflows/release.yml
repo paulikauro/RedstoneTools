@@ -21,8 +21,11 @@ jobs:
       - name: Build and test
         run: ./gradlew build
 
-      - name: Copy jar
-        run: cp build/libs/*.jar asset.jar
+      - name: Tag name and jar name
+        id: names
+        run: |
+          echo "::set-output name=tag::$(git describe)\n"
+          cp build/libs/RedstoneTools*.jar asset.jar
       
       - name: Create release
         id: create_release
@@ -31,8 +34,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release-name: Release ${{ github.ref }}
-          body: Release ${{ github.ref }}
           draft: false
           prerelease: false
 
@@ -43,5 +44,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: asset.jar
-          asset_name: RedstoneTools-${{ github.ref }}.jar
+          asset_name: RedstoneTools-${{ steps.names.outputs.tag }}.jar
           asset_content_type: application/java-archive
