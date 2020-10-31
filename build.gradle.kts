@@ -8,6 +8,7 @@ plugins {
     kotlin("jvm") version kotlinVersion
     kotlin("kapt") version kotlinVersion
     id("com.github.johnrengelman.shadow") version "2.0.4"
+    id("net.minecrell.plugin-yml.bukkit") version "0.3.0"
 }
 
 repositories {
@@ -51,6 +52,12 @@ dependencies {
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.3.1")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.3.1")
+}
+
+bukkit {
+    main = "redstonetools.RedstoneTools"
+    apiVersion = "1.15"
+    depend = listOf("WorldEdit")
 }
 
 tasks.test {
