@@ -46,7 +46,7 @@ class WorldEditHelper(plugin: JavaPlugin, private val worldEdit: WorldEdit) : Li
         val lines = buildList {
             add("${DARK_GREEN}Position A:")
             add("   $GRAY${bvMax.blockX}$WHITE,$GRAY${bvMax.blockY}$WHITE,$GRAY${bvMax.blockZ}")
-            val volume = selection.area
+            val volume = selection.volume
             if (volume != 1) {
                 add("${DARK_GREEN}Position B:")
                 add("   $GRAY${bvMin.blockX}$WHITE,$GRAY${bvMin.blockY}$WHITE,$GRAY${bvMin.blockZ}")

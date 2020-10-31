@@ -4,7 +4,7 @@ group = ""
 version = "1.2.1"
 
 plugins {
-    val kotlinVersion = "1.4.0"
+    val kotlinVersion = "1.4.10"
     kotlin("jvm") version kotlinVersion
     kotlin("kapt") version kotlinVersion
     id("com.github.johnrengelman.shadow") version "2.0.4"
@@ -23,7 +23,7 @@ repositories {
     }
     maven {
         name = "enginehub-maven"
-        url = uri("http://maven.enginehub.org/repo/")
+        url = uri("https://maven.enginehub.org/repo/")
     }
     maven {
         name = "aikar"
@@ -42,10 +42,10 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation(kotlin("reflect"))
     implementation(group = "co.aikar", name = "acf-paper", version = "0.5.0-SNAPSHOT")
-    implementation(group = "com.google.re2j", name = "re2j", version = "1.4")
+    implementation(group = "com.google.re2j", name = "re2j", version = "1.5")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.8")
 
-    compileOnly(group = "de.tr7zw", name = "item-nbt-api-plugin", version = "2.4.1")
+    compileOnly(group = "de.tr7zw", name = "item-nbt-api-plugin", version = "2.5.0")
     compileOnly(group = "org.spigotmc", name = "spigot-api", version = "1.15-R0.1-SNAPSHOT")
     compileOnly(group = "com.sk89q.worldedit", name = "worldedit-bukkit", version = "7.2.0-SNAPSHOT")
     compileOnly(group = "com.comphenix.protocol", name = "ProtocolLib", version = "4.5.0")
