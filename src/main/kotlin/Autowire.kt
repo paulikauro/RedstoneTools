@@ -1,7 +1,10 @@
 package redstonetools
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.annotation.*
+import co.aikar.commands.annotation.CommandAlias
+import co.aikar.commands.annotation.CommandPermission
+import co.aikar.commands.annotation.Default
+import co.aikar.commands.annotation.Description
 import com.comphenix.protocol.PacketType
 import com.comphenix.protocol.ProtocolManager
 import com.comphenix.protocol.wrappers.EnumWrappers
@@ -14,6 +17,8 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.player.PlayerQuitEvent
+import org.bukkit.inventory.ItemStack
+import org.bukkit.plugin.java.JavaPlugin
 import java.util.*
 
 @CommandAlias("autowire|aw")
@@ -45,6 +50,7 @@ class Autowire(
 }
 
 class AutoWireListener(
+    private val plugin: JavaPlugin,
     private val autos: MutableSet<UUID>
 ) : Listener {
     @EventHandler
@@ -59,6 +65,18 @@ class AutoWireListener(
         if (event.blockPlaced.type.hasGravity()) return
         val wirePosition = event.blockPlaced.location.add(0.0, 1.0, 0.0)
         if (wirePosition.block.type != Material.AIR) return
+        val airState = wirePosition.block.state
+        val blockPlaceEvent = BlockPlaceEvent(
+            wirePosition.block,
+            airState,
+            event.blockPlaced,
+            ItemStack(Material.REDSTONE_WIRE),
+            event.player,
+            true,
+            event.hand
+        )
+        plugin.server.pluginManager.callEvent(blockPlaceEvent)
+        if (blockPlaceEvent.isCancelled) return
         wirePosition.block.type = Material.REDSTONE_WIRE
         val wireData: RedstoneWire = Material.REDSTONE_WIRE.createBlockData() as RedstoneWire
         wireData.allowedFaces.forEach {
