@@ -22,7 +22,6 @@ import java.util.logging.Level
 const val MAKE_SELECTION_FIRST = "Make a region selection first."
 
 class RedstoneTools : JavaPlugin() {
-
     private fun handleCommandException(
         command: BaseCommand,
         registeredCommand: RegisteredCommand<*>,

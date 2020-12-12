@@ -15,7 +15,6 @@ import com.sk89q.worldedit.function.operation.Operations
 import com.sk89q.worldedit.function.visitor.RegionVisitor
 import com.sk89q.worldedit.util.formatting.component.InvalidComponentException
 import com.sk89q.worldedit.util.formatting.text.TextComponent
-import com.sk89q.worldedit.util.formatting.text.event.HoverEvent
 import com.sk89q.worldedit.util.formatting.text.format.TextColor
 import com.sk89q.worldedit.util.formatting.text.serializer.gson.GsonComponentSerializer
 import com.sk89q.worldedit.world.block.BaseBlock
@@ -24,6 +23,8 @@ import org.bukkit.entity.Player
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.math.ceil
+import com.google.re2j.Pattern
+import com.google.re2j.PatternSyntaxException
 
 val searchResults = HashMap<UUID, MutableList<LocationContainer>>()
 
@@ -59,8 +60,8 @@ class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
 
     private fun doSearch(player: WEPlayer, arg: String) {
         val pattern = try {
-            Regex(arg)
-        } catch (e: Exception) {
+            Pattern.compile(arg)
+        } catch (e: PatternSyntaxException) {
             throw RedstoneToolsException("Illegal pattern: " + e.message)
         }
         val session = worldEdit.sessionManager.get(player)
@@ -69,21 +70,21 @@ class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
         } catch (e: IncompleteRegionException) {
             throw RedstoneToolsException(MAKE_SELECTION_FIRST)
         }
-        val matchMap = mutableListOf<LocationContainer>()
+        val matches = mutableListOf<LocationContainer>()
         val blockMask = BlockCategoryMask(session.selectionWorld, BlockCategories.SIGNS)
         val regionFunction = RegionFunction { position ->
             val baseBlock = session.selectionWorld.getFullBlock(position)
-            val parsedMatch = parseMatch(baseBlock, pattern)
-            if (parsedMatch != null) {
-                matchMap.add(LocationContainer(position, parsedMatch))
+            val match = parseMatch(baseBlock, pattern)
+            if (match != null) {
+                matches.add(LocationContainer(position, match))
             }
             false
         }
         val regionMaskingFilter = RegionMaskingFilter(blockMask, regionFunction)
         val regionVisitor = RegionVisitor(selection, regionMaskingFilter)
         Operations.complete(regionVisitor)
-        if (matchMap.isNotEmpty()) {
-            searchResults[player.uniqueId] = matchMap
+        if (matches.isNotEmpty()) {
+            searchResults[player.uniqueId] = matches
             page(BukkitAdapter.adapt(player), 1)
         } else {
             searchResults.remove(player.uniqueId)
@@ -91,36 +92,43 @@ class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
         }
     }
 
-    private fun parseMatch(baseBlock: BaseBlock, pattern: Regex): TextComponent? {
-        if (!baseBlock.hasNbtData()) {
-            return null
+    private fun parseMatch(baseBlock: BaseBlock, pattern: Pattern): TextComponent? {
+        val compoundTag = baseBlock.nbtData ?: return null
+        val lines = (1..4).map { i ->
+            val textTag = compoundTag.value["Text$i"] as StringTag
+            val component = GsonComponentSerializer.INSTANCE.deserialize(textTag.value) as TextComponent
+            component.getAllContent()
         }
-        val compoundTag = baseBlock.nbtData!!
-        var localMatch: TextComponent? = null
-        buildString {
-            for (i in 1..4) {
-                val textTag = compoundTag.value["Text$i"] as StringTag
-                val component = GsonComponentSerializer.INSTANCE.deserialize(textTag.value) as TextComponent
-                val currentLine = component.getAllContent()
-                append("${currentLine}\n")
-                val localMatches = pattern.find(currentLine)
-                if (localMatches != null) {
-                    localMatch = TextComponent.of("Line $i: ")
+
+        return lines
+            .mapIndexedNotNull { index, line -> line
+                .findFirstMatch(pattern)
+                ?.let {
+                    TextComponent.of("Line ${index + 1}: ")
                         .color(TextColor.GRAY)
-                        .append(currentLine.getHighlightedReplacement(localMatches.groupValues.first()))
-                    break
+                        .append(line.withHighlightedReplacement(it.text))
                 }
             }
-        }.removeSuffix("\n").apply {
-            if (localMatch != null) {
-                return localMatch
-            } else {
-                val match = pattern.find(this) ?: return null
-                return TextComponent.of("Multi-line match")
-                    .color(TextColor.GRAY)
-                    .hoverEvent(HoverEvent.showText(getHighlightedReplacement(match.groupValues.first())))
-            }
-        }
+            .ifEmpty { null }
+            ?.let { matchComponents -> TextComponent.join(TextComponent.newline(), matchComponents) }
+        // TODO: multiline matches
+//            .ifEmpty { lines.joinToString("\n").findAll(pattern) }
+    }
+}
+
+private data class Match(val text: String, val start: Int, val end: Int)
+
+private fun String.findFirstMatch(pattern: Pattern): Match? {
+    val matcher = pattern.matcher(this)
+    if (!matcher.find()) return null
+    return Match(matcher.group(), matcher.start(), matcher.end())
+}
+
+// TODO: ???
+private fun String.findAll(pattern: Pattern) = sequence {
+    val matcher = pattern.matcher(this@findAll)
+    while (matcher.find()) {
+        yield(Match(matcher.group(), matcher.start(), matcher.end()))
     }
 }
 

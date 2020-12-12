@@ -73,7 +73,9 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         val session = worldEdit.sessionManager.get(player)
         val selection = try {
             // TODO: null check session.selectionWorld
-            session.getSelection(session.selectionWorld)
+            session.selectionWorld?.let { world ->
+                session.getSelection(world)
+            } ?: throw IncompleteRegionException()
         } catch (e: IncompleteRegionException) {
             throw ConditionFailedException("You do not have a selection!")
         }

@@ -12,7 +12,7 @@ fun TextComponent.getAllContent(): String =
         }
     }
 
-fun String.getHighlightedReplacement(replacement: String): TextComponent =
+fun String.withHighlightedReplacement(replacement: String): TextComponent =
     TextComponent.of(this.substringBefore(replacement))
         .color(TextColor.WHITE)
         .append(

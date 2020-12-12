@@ -1,12 +1,15 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.io.ByteArrayOutputStream
 
 group = ""
-version = "1.2.1"
+version = execute("git", "describe", "--long", "--dirty")
 
 plugins {
-    kotlin("jvm") version "1.3.71"
-    kotlin("kapt") version "1.3.71"
+    val kotlinVersion = "1.4.10"
+    kotlin("jvm") version kotlinVersion
+    kotlin("kapt") version kotlinVersion
     id("com.github.johnrengelman.shadow") version "2.0.4"
+    id("net.minecrell.plugin-yml.bukkit") version "0.3.0"
 }
 
 repositories {
@@ -21,7 +24,7 @@ repositories {
     }
     maven {
         name = "enginehub-maven"
-        url = uri("http://maven.enginehub.org/repo/")
+        url = uri("https://maven.enginehub.org/repo/")
     }
     maven {
         name = "aikar"
@@ -38,14 +41,28 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
+    implementation(kotlin("reflect"))
     implementation(group = "co.aikar", name = "acf-paper", version = "0.5.0-SNAPSHOT")
+    implementation(group = "com.google.re2j", name = "re2j", version = "1.5")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.8")
 
-    compileOnly(group = "de.tr7zw", name = "item-nbt-api-plugin", version = "2.4.1")
-    compileOnly(group = "org.spigotmc", name = "spigot-api", version = "1.16.1-R0.1-SNAPSHOT")
+    compileOnly(group = "de.tr7zw", name = "item-nbt-api-plugin", version = "2.5.0")
+    compileOnly(group = "org.spigotmc", name = "spigot-api", version = "1.15-R0.1-SNAPSHOT")
     compileOnly(group = "com.sk89q.worldedit", name = "worldedit-bukkit", version = "7.2.0-SNAPSHOT")
     compileOnly(group = "com.comphenix.protocol", name = "ProtocolLib", version = "4.5.0")
 
-    kapt(group = "org.spigotmc", name = "plugin-annotations", version = "1.2.2-SNAPSHOT")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.3.1")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.3.1")
+}
+
+bukkit {
+    main = "redstonetools.RedstoneTools"
+    apiVersion = "1.15"
+    depend = listOf("WorldEdit")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.shadowJar {
@@ -63,3 +80,12 @@ tasks.withType<KotlinCompile> {
 tasks.build {
     dependsOn(tasks.shadowJar)
 }
+
+
+fun execute(vararg command: String): String = ByteArrayOutputStream()
+    .also { output ->
+        project.exec {
+            commandLine = command.toList()
+            standardOutput = output
+        }
+    }.toString().trim()
