@@ -53,7 +53,7 @@ class RedstoneTools : JavaPlugin() {
         val autos: MutableSet<UUID> = mutableSetOf()
         val protocolManager = ProtocolLibrary.getProtocolManager()
         server.pluginManager.registerEvents(WorldEditHelper(this, worldEdit), this)
-        server.pluginManager.registerEvents(AutoWireListener(autos), this)
+        server.pluginManager.registerEvents(AutoWireListener(this, autos), this)
         server.pluginManager.registerEvents(SlabListener(), this)
         PaperCommandManager(this).apply {
             commandCompletions.registerCompletion("slabs", SlabCompletionHandler())
