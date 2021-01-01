@@ -37,6 +37,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
+          name: ${{ steps.names.outputs.tag }}
           draft: false
           prerelease: false
 
