@@ -28,17 +28,15 @@ class RedstoneTools : JavaPlugin() {
         sender: CommandIssuer,
         args: List<String>,
         throwable: Throwable
-    ): Boolean {
-        return when (throwable) {
-            is RedstoneToolsException, is WorldEditException -> {
-                val message = throwable.message ?: "Something went wrong."
-                sender.sendMessage("${ChatColor.DARK_GRAY}[${ChatColor.GRAY}RedstoneTools${ChatColor.DARK_GRAY}]${ChatColor.GRAY} $message")
-                true
-            }
-            else -> {
-                logger.log(Level.SEVERE, "Error in ACF", throwable)
-                false
-            }
+    ): Boolean = when (throwable) {
+        is RedstoneToolsException, is WorldEditException -> {
+            val message = throwable.message ?: "Something went wrong."
+            sender.sendMessage("${ChatColor.DARK_GRAY}[${ChatColor.GRAY}RedstoneTools${ChatColor.DARK_GRAY}]${ChatColor.GRAY} $message")
+            true
+        }
+        else -> {
+            logger.log(Level.SEVERE, "handleCommandException", throwable)
+            false
         }
     }
 
@@ -46,57 +44,63 @@ class RedstoneTools : JavaPlugin() {
         val wePlugin = server.pluginManager.getPlugin("WorldEdit")
         if (wePlugin !is WorldEditPlugin) {
             logger.severe("Could not load WorldEdit! RedstoneTools requires WorldEdit to function properly.")
+            // TODO: actually disable?
             logger.severe("Disabled.")
             return
         }
         val worldEdit = wePlugin.worldEdit
         val autos: MutableSet<UUID> = mutableSetOf()
         val protocolManager = ProtocolLibrary.getProtocolManager()
-        server.pluginManager.registerEvents(WorldEditHelper(this, worldEdit), this)
-        server.pluginManager.registerEvents(AutoWireListener(this, autos), this)
-        server.pluginManager.registerEvents(SlabListener(), this)
+        arrayOf(
+            WorldEditHelper(this, worldEdit),
+            AutoWireListener(this, autos),
+            SlabListener(),
+        ).forEach { server.pluginManager.registerEvents(it, this) }
         PaperCommandManager(this).apply {
-            commandCompletions.registerCompletion("slabs", SlabCompletionHandler())
-            commandCompletions.registerCompletion("we_mask", MaskCompletionHandler(worldEdit))
-            commandCompletions.registerCompletion("find_page", FindPageCompletionHandler())
-            commandCompletions.registerCompletion("search_page", SearchPageCompletionHandler())
-            registerThing<SignalStrength>("Signal strength", { SignalStrength.of(it) }, SignalStrength.values)
-            registerThing<SignalContainer>("Container", { SignalContainer.of(it) }, SignalContainer.values)
+            arrayOf(
+                "slabs" to SlabCompletionHandler(),
+                "we_mask" to MaskCompletionHandler(worldEdit),
+                "find_page" to FindPageCompletionHandler(),
+                "search_page" to SearchPageCompletionHandler(),
+            ).forEach { (id, handler) -> commandCompletions.registerCompletion(id, handler) }
+            registerThing(SignalStrength)
+            registerThing(SignalContainer)
             setDefaultExceptionHandler(::handleCommandException, false)
-            registerCommands(
+            arrayOf(
                 RStack(worldEdit),
                 Find(worldEdit),
                 SignSearch(worldEdit),
                 Container(),
                 Slab(),
                 Autowire(autos, protocolManager)
-            )
+            ).forEach(::registerCommand)
         }
     }
 }
 
 class RedstoneToolsException(message: String) : Exception(message)
 
-private fun PaperCommandManager.registerCommands(vararg commands: BaseCommand) =
-    commands.forEach(::registerCommand)
+private interface Thing<T> {
+    val readableName: String
+    fun of(arg: String): T?
+    val values: List<String>
+}
 
-inline fun <reified T> PaperCommandManager.registerThing(
-    readableName: String,
-    crossinline create: (String) -> T?,
-    values: List<String>
-) {
-    val name = readableName.replace(" ", "_").toLowerCase()
-    val errorMessage = "$readableName must be one of $values"
+private inline fun <reified T> PaperCommandManager.registerThing(thing: Thing<T>) {
+    val name = thing.readableName.replace(" ", "_").toLowerCase()
+    val errorMessage = "${thing.readableName} must be one of ${thing.values}"
     commandContexts.registerContext(T::class.java) { context ->
-        create(context.popFirstArg()) ?: throw InvalidCommandArgument(errorMessage)
+        thing.of(context.popFirstArg()) ?: throw InvalidCommandArgument(errorMessage)
     }
-    commandCompletions.registerStaticCompletion(name, values)
-    commandCompletions.setDefaultCompletion(name, T::class.java)
+    commandCompletions.apply {
+        registerStaticCompletion(name, thing.values)
+        setDefaultCompletion(name, T::class.java)
+    }
 }
 
 class SignalStrength(val value: Int) {
-    companion object {
-        fun of(arg: String): SignalStrength? = when (arg) {
+    companion object : Thing<SignalStrength> {
+        override fun of(arg: String): SignalStrength? = when (arg) {
             in hexValues -> SignalStrength(arg.toInt(16))
             in intValues -> SignalStrength(arg.toInt())
             else -> null
@@ -104,12 +108,13 @@ class SignalStrength(val value: Int) {
 
         private val intValues = (0..15).map(Int::toString)
         private val hexValues = ('a'..'f').map(Char::toString)
-        val values = intValues + hexValues
+        override val values = intValues + hexValues
+        override val readableName = "Signal strength"
     }
 }
 
 class SignalContainer(val material: Material) {
-    companion object {
+    companion object : Thing<SignalContainer> {
         // Not a map [yet] cuz we want shortcuts
         // maybe possible to just check first letter (like WorldEdit does with directions)
         // depending on what other containers we want to support
@@ -119,25 +124,20 @@ class SignalContainer(val material: Material) {
             "barrel" to Material.BARREL,
             "hopper" to Material.HOPPER
         )
-        val values = materials.map { it.first }.sorted()
-        fun of(arg: String): SignalContainer? {
-            // inefficient but not critical
-            for ((name, material) in materials) {
-                if (name.startsWith(arg)) {
-                    return SignalContainer(material)
-                }
-            }
-            return null
-        }
+        override val values = materials.map { it.first }.sorted()
+        override fun of(arg: String): SignalContainer? = materials
+            .firstOrNull { (name, _) -> name.startsWith(arg) }
+            ?.let { (_, material) -> SignalContainer(material) }
+
+        override val readableName = "Container"
     }
 }
 
 class MaskCompletionHandler(worldEdit: WorldEdit) :
     CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
     private val maskFactory = MaskFactory(worldEdit)
-    override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> {
-        return maskFactory.getSuggestions(context.input)
-    }
+    override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> =
+        maskFactory.getSuggestions(context.input)
 }
 
 data class LocationContainer(val location: BlockVector3, val match: TextComponent)
@@ -151,20 +151,18 @@ class LocationsPaginationBox(private val locations: MutableList<LocationContaine
 
     override fun getComponent(number: Int): Component {
         if (number > locations.size) throw IllegalArgumentException("Invalid location index.")
-        return TextComponent.of("${number+1}: ")
+        return TextComponent.of("${number + 1}: ")
             .append(locations[number].match)
             .color(TextColor.LIGHT_PURPLE)
-            .clickEvent(ClickEvent.runCommand("/tp" +
-                " ${locations[number].location.x}" +
-                " ${locations[number].location.y}" +
-                " ${locations[number].location.z}"))
+            .clickEvent(locations[number].location.run { ClickEvent.runCommand("/tp $x $y $z") })
             .hoverEvent(HoverEvent.showText(TextComponent.of("Click to teleport")))
     }
 
     override fun getComponentsSize(): Int = locations.size
 
     override fun create(page: Int): Component {
-        super.getContents().append(TextComponent.of("Total Results: ${locations.size}").color(TextColor.GRAY))
+        super.getContents()
+            .append(TextComponent.of("Total Results: ${locations.size}").color(TextColor.GRAY))
             .append(TextComponent.newline())
         return super.create(page)
     }
