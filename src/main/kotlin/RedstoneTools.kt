@@ -49,11 +49,11 @@ class RedstoneTools : JavaPlugin() {
             return
         }
         val worldEdit = wePlugin.worldEdit
-        val autos: MutableSet<UUID> = mutableSetOf()
         val protocolManager = ProtocolLibrary.getProtocolManager()
+        val autowire = Autowire(protocolManager, server.pluginManager)
         arrayOf(
             WorldEditHelper(this, worldEdit),
-            AutoWireListener(this, autos),
+            autowire,
             SlabListener(),
         ).forEach { server.pluginManager.registerEvents(it, this) }
         PaperCommandManager(this).apply {
@@ -72,7 +72,7 @@ class RedstoneTools : JavaPlugin() {
                 SignSearch(worldEdit),
                 Container(),
                 Slab(),
-                Autowire(autos, protocolManager)
+                autowire,
             ).forEach(::registerCommand)
         }
     }

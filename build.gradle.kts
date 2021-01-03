@@ -5,7 +5,7 @@ group = ""
 version = execute("git", "describe", "--long", "--dirty")
 
 plugins {
-    val kotlinVersion = "1.4.10"
+    val kotlinVersion = "1.4.21"
     kotlin("jvm") version kotlinVersion
     kotlin("kapt") version kotlinVersion
     id("com.github.johnrengelman.shadow") version "2.0.4"
@@ -14,29 +14,12 @@ plugins {
 
 repositories {
     mavenCentral()
-    maven {
-        name = "spigotmc-repo"
-        url = uri("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
-    }
-    maven {
-        name = "sonatype-oss"
-        url = uri("https://oss.sonatype.org/content/groups/public/")
-    }
-    maven {
-        name = "enginehub-maven"
-        url = uri("https://maven.enginehub.org/repo/")
-    }
-    maven {
-        name = "aikar"
-        url = uri("https://repo.aikar.co/content/groups/aikar/")
-    }
-    maven {
-        name = "codemc-repo"
-        url = uri("https://repo.codemc.org/repository/maven-public/")
-    }
-    maven {
-        url = uri("https://repo.dmulloy2.net/nexus/repository/public/")
-    }
+    maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
+    maven("https://oss.sonatype.org/content/groups/public/")
+    maven("https://maven.enginehub.org/repo/")
+    maven("https://repo.aikar.co/content/groups/aikar/")
+    maven("https://repo.codemc.org/repository/maven-public/")
+    maven("https://repo.dmulloy2.net/nexus/repository/public/")
 }
 
 dependencies {
@@ -73,7 +56,10 @@ tasks.withType<KotlinCompile> {
     kotlinOptions {
         jvmTarget = "1.8"
         javaParameters = true
-        freeCompilerArgs = listOf("-Xopt-in=kotlin.ExperimentalStdlibApi")
+        freeCompilerArgs = listOf(
+            "-Xopt-in=kotlin.ExperimentalStdlibApi",
+            "-Xopt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
+        )
     }
 }
 

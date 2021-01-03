@@ -18,41 +18,37 @@ import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.ItemStack
-import org.bukkit.plugin.java.JavaPlugin
+import org.bukkit.plugin.PluginManager
 import java.util.*
 
 @CommandAlias("autowire|aw")
 @Description("Get that there redstone automagically!")
 @CommandPermission("redstonetools.autowire")
 class Autowire(
-    private val autos: MutableSet<UUID>,
-    private val protocolManager: ProtocolManager
-) : BaseCommand() {
+    private val protocolManager: ProtocolManager,
+    private val pluginManager: PluginManager,
+) : BaseCommand(), Listener {
+    private val autos = mutableSetOf<UUID>()
+
     @Default
-    fun autowire(player: Player) {
+    fun toggleAutowire(player: Player) {
         if (player.uniqueId in autos) {
             autos.remove(player.uniqueId)
-            protocolManager.sendResponsePacket(player, "Auto Wire Disabled")
+            "Auto Wire Disabled"
         } else {
             autos.add(player.uniqueId)
-            protocolManager.sendResponsePacket(player, "Auto Wire Enabled")
+            "Auto Wire Enabled"
+        }.let { player.sendActionBarTitle(it) }
+    }
+
+    private fun Player.sendActionBarTitle(message: String) {
+        val titlePacket = protocolManager.createPacket(PacketType.Play.Server.TITLE).apply {
+            titleActions.write(0, EnumWrappers.TitleAction.ACTIONBAR)
+            chatComponents.write(0, WrappedChatComponent.fromText(message))
         }
+        protocolManager.sendServerPacket(this, titlePacket)
     }
 
-    private fun ProtocolManager.sendResponsePacket(player: Player, message: String) {
-        val titlePacket = this.createPacket(PacketType.Play.Server.TITLE)
-        titlePacket.titleActions
-            .write(0, EnumWrappers.TitleAction.ACTIONBAR)
-        titlePacket.chatComponents
-            .write(0, WrappedChatComponent.fromText(message))
-        this.sendServerPacket(player, titlePacket)
-    }
-}
-
-class AutoWireListener(
-    private val plugin: JavaPlugin,
-    private val autos: MutableSet<UUID>
-) : Listener {
     @EventHandler
     fun onLeaveEvent(event: PlayerQuitEvent) {
         autos.remove(event.player.uniqueId)
@@ -75,7 +71,7 @@ class AutoWireListener(
             true,
             event.hand
         )
-        plugin.server.pluginManager.callEvent(blockPlaceEvent)
+        pluginManager.callEvent(blockPlaceEvent)
         if (blockPlaceEvent.isCancelled) return
         wirePosition.block.type = Material.REDSTONE_WIRE
         val wireData: RedstoneWire = Material.REDSTONE_WIRE.createBlockData() as RedstoneWire
