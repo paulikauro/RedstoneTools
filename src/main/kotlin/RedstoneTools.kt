@@ -16,7 +16,6 @@ import com.sk89q.worldedit.util.formatting.text.format.TextColor
 import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.plugin.java.JavaPlugin
-import java.util.*
 import java.util.logging.Level
 
 const val MAKE_SELECTION_FIRST = "Make a region selection first."
@@ -53,8 +52,8 @@ class RedstoneTools : JavaPlugin() {
         val autowire = Autowire(protocolManager, server.pluginManager)
         arrayOf(
             WorldEditHelper(this, worldEdit),
-            autowire,
             SlabListener(),
+            autowire,
         ).forEach { server.pluginManager.registerEvents(it, this) }
         PaperCommandManager(this).apply {
             arrayOf(
@@ -83,7 +82,7 @@ class RedstoneToolsException(message: String) : Exception(message)
 private interface Thing<T> {
     val readableName: String
     fun of(arg: String): T?
-    val values: List<String>
+    val values: Collection<String>
 }
 
 private inline fun <reified T> PaperCommandManager.registerThing(thing: Thing<T>) {

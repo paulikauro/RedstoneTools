@@ -73,10 +73,8 @@ class SlabListener : Listener {
 
 class SlabCompletionHandler :
     CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
-    override fun getCompletions(context: BukkitCommandCompletionContext?): MutableCollection<String> =
-        Material.values().filter {
-            it.isBlock && (it.createBlockData() is Slab)
-        }.map {
-            it.toString().toLowerCase()
-        }.toMutableList()
+    override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> = Material
+        .values()
+        .filter { it.isBlock && it.createBlockData() is Slab }
+        .map { it.toString().toLowerCase() }
 }

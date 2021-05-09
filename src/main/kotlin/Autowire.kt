@@ -53,6 +53,7 @@ class Autowire(
     fun onLeaveEvent(event: PlayerQuitEvent) {
         autos.remove(event.player.uniqueId)
     }
+
     @EventHandler
     fun onAutoWireEvent(event: BlockPlaceEvent) {
         if (event.player.uniqueId !in autos) return
@@ -74,7 +75,7 @@ class Autowire(
         pluginManager.callEvent(blockPlaceEvent)
         if (blockPlaceEvent.isCancelled) return
         wirePosition.block.type = Material.REDSTONE_WIRE
-        val wireData: RedstoneWire = Material.REDSTONE_WIRE.createBlockData() as RedstoneWire
+        val wireData = Material.REDSTONE_WIRE.createBlockData() as RedstoneWire
         wireData.allowedFaces.forEach {
             wireData.setFace(it, RedstoneWire.Connection.SIDE)
         }
