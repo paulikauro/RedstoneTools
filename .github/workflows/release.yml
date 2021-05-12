@@ -34,7 +34,6 @@ jobs:
           CUSTOM_TAG: ${{ steps.version.outputs.version }}
 
       - name: Copy jar
-        id: names
         run: cp build/libs/RedstoneTools*.jar asset.jar
 
       - name: Create release
