@@ -71,10 +71,3 @@ tasks.register("getVersion") {
     println(version)
 }
 
-fun execute(vararg command: String): String = ByteArrayOutputStream()
-    .also { output ->
-        project.exec {
-            commandLine = command.toList()
-            standardOutput = output
-        }
-    }.toString().trim()
