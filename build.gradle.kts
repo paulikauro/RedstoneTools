@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.ByteArrayOutputStream
 
 group = ""
-version = execute("git", "describe", "--long", "--dirty")
+version = "1.2"
 
 plugins {
     val kotlinVersion = "1.4.21"
@@ -67,11 +67,7 @@ tasks.build {
     dependsOn(tasks.shadowJar)
 }
 
+tasks.register("getVersion") {
+    println(version)
+}
 
-fun execute(vararg command: String): String = ByteArrayOutputStream()
-    .also { output ->
-        project.exec {
-            commandLine = command.toList()
-            standardOutput = output
-        }
-    }.toString().trim()
