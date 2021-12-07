@@ -25,7 +25,7 @@ jobs:
 
       - name: Get version
         id: version
-        run:  echo ::set-output name=version::v$(./gradlew -q getVersion).${{ github.run_number }}
+        run:  echo ::set-output name=version::v$(./gradlew -q getVersion)
 
       - name: Push new tag
         uses: anothrNick/github-tag-action@1.26.0
