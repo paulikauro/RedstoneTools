@@ -36,12 +36,14 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         args: Array<String>
     ) {
         var expand = false
+        var withAir = false
         var direction: String? = null
         val numbers = mutableListOf<Int>()
         for (arg in args) {
             when {
                 // don't care about duplicate flags
                 arg == "-e" -> expand = true
+                arg == "-w" -> withAir = true
                 arg.all { it.isDigit() || it in "+-" } -> numbers.add(parseInt(arg))
                 else -> {
                     // probably a direction string
@@ -61,15 +63,22 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
             count *= -1
             spacing *= -1
         }
-        val affected = try {
-            doStack(BukkitAdapter.adapt(player), count, spacing, expand, direction ?: "me")
+        try {
+            doStack(BukkitAdapter.adapt(player), count, spacing, expand, withAir, direction ?: "me")
         } catch (e: UnknownDirectionException) {
             throw ConditionFailedException("Unknown direction")
         }
     }
 
     // throws UnknownDirectionException
-    private fun doStack(player: WEPlayer, count: Int, spacing: Int, expand: Boolean, direction: String): Int {
+    private fun doStack(
+        player: WEPlayer,
+        count: Int,
+        spacing: Int,
+        expand: Boolean,
+        withAir: Boolean,
+        direction: String
+    ): Int {
         val session = worldEdit.sessionManager.get(player)
         val selection = try {
             // TODO: null check session.selectionWorld
@@ -88,7 +97,9 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
                     isCopyingBiomes = false
                     isCopyingEntities = false
                     isRemovingEntities = false
-                    sourceMask = ExistingBlockMask(editSession)
+                    if (!withAir) {
+                        sourceMask = ExistingBlockMask(editSession)
+                    }
                 }
                 Operations.complete(copy)
                 session.remember(editSession)
