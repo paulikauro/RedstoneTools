@@ -62,8 +62,10 @@ class RedstoneTools : JavaPlugin() {
                 "find_page" to FindPageCompletionHandler(),
                 "search_page" to SearchPageCompletionHandler(),
             ).forEach { (id, handler) -> commandCompletions.registerCompletion(id, handler) }
-            registerThing(SignalStrength)
-            registerThing(SignalContainer)
+            arrayOf(
+                SignalStrength,
+                SignalContainer,
+            ).forEach { registerThing(it) }
             setDefaultExceptionHandler(::handleCommandException, false)
             arrayOf(
                 RStack(worldEdit),
@@ -83,17 +85,18 @@ private interface Thing<T> {
     val readableName: String
     fun of(arg: String): T?
     val values: Collection<String>
+    val valueClass: Class<T>
 }
 
-private inline fun <reified T> PaperCommandManager.registerThing(thing: Thing<T>) {
+private fun <T> PaperCommandManager.registerThing(thing: Thing<T>) {
     val name = thing.readableName.replace(" ", "_").toLowerCase()
     val errorMessage = "${thing.readableName} must be one of ${thing.values}"
-    commandContexts.registerContext(T::class.java) { context ->
+    commandContexts.registerContext(thing.valueClass) { context ->
         thing.of(context.popFirstArg()) ?: throw InvalidCommandArgument(errorMessage)
     }
     commandCompletions.apply {
         registerStaticCompletion(name, thing.values)
-        setDefaultCompletion(name, T::class.java)
+        setDefaultCompletion(name, thing.valueClass)
     }
 }
 
@@ -109,6 +112,7 @@ class SignalStrength(val value: Int) {
         private val hexValues = ('a'..'f').map(Char::toString)
         override val values = intValues + hexValues
         override val readableName = "Signal strength"
+        override val valueClass = SignalStrength::class.java
     }
 }
 
@@ -129,6 +133,7 @@ class SignalContainer(val material: Material) {
             ?.let { (_, material) -> SignalContainer(material) }
 
         override val readableName = "Container"
+        override val valueClass = SignalContainer::class.java
     }
 }
 

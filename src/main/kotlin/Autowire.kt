@@ -56,10 +56,14 @@ class Autowire(
 
     @EventHandler
     fun onAutoWireEvent(event: BlockPlaceEvent) {
-        if (event.player.uniqueId !in autos) return
-        if (event.player.gameMode != GameMode.CREATIVE) return
-        if (!event.block.blockData.material.isSolid) return
-        if (event.blockPlaced.type.hasGravity()) return
+        with(event) {
+            arrayOf(
+                player.uniqueId !in autos,
+                player.gameMode != GameMode.CREATIVE,
+                !block.blockData.material.isSolid,
+                blockPlaced.type.hasGravity(),
+            ).any().ifTrue { return }
+        }
         val wirePosition = event.blockPlaced.location.add(0.0, 1.0, 0.0)
         if (wirePosition.block.type != Material.AIR) return
         val airState = wirePosition.block.state
@@ -81,4 +85,8 @@ class Autowire(
         }
         wirePosition.block.blockData = wireData
     }
+}
+
+private inline fun Boolean.ifTrue(block: () -> Unit) {
+    if (this) block()
 }
