@@ -27,12 +27,6 @@ jobs:
         id: version
         run:  echo ::set-output name=version::v$(./gradlew -q getVersion)
 
-      - name: Push new tag
-        uses: anothrNick/github-tag-action@1.26.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CUSTOM_TAG: ${{ steps.version.outputs.version }}
-
       - name: Copy jar
         run: cp build/libs/RedstoneTools*-all.jar asset.jar
 

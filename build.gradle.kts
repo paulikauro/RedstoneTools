@@ -1,8 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import java.io.ByteArrayOutputStream
 
 group = ""
-version = "1.2"
+version = "1.3"
 
 plugins {
     val kotlinVersion = "1.6.0"
