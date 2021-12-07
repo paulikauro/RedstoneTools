@@ -152,7 +152,7 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
 
     private fun isDiagDirStr(direction: String, upOrDown: Char) =
         // check length, because 'd' and 'u' alone are not diagonal directions (they're just up or down)
-        direction.length > 1 && direction.last().toLowerCase() == upOrDown
+        direction.length > 1 && direction.last().lowercaseChar() == upOrDown
 }
 
 private fun <E> List<E>.getOrDefault(index: Int, default: E): E = getOrNull(index) ?: default

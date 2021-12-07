@@ -49,7 +49,7 @@ class RedstoneTools : JavaPlugin() {
         }
         val worldEdit = wePlugin.worldEdit
         val protocolManager = ProtocolLibrary.getProtocolManager()
-        val autowire = Autowire(protocolManager, server.pluginManager)
+        val autowire = Autowire(server.pluginManager)
         arrayOf(
             WorldEditHelper(this, worldEdit),
             SlabListener(),
@@ -89,7 +89,7 @@ private interface Thing<T> {
 }
 
 private fun <T> PaperCommandManager.registerThing(thing: Thing<T>) {
-    val name = thing.readableName.replace(" ", "_").toLowerCase()
+    val name = thing.readableName.replace(" ", "_").lowercase()
     val errorMessage = "${thing.readableName} must be one of ${thing.values}"
     commandContexts.registerContext(thing.valueClass) { context ->
         thing.of(context.popFirstArg()) ?: throw InvalidCommandArgument(errorMessage)

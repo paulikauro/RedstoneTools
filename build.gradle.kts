@@ -5,10 +5,10 @@ group = ""
 version = execute("git", "describe", "--long", "--dirty")
 
 plugins {
-    val kotlinVersion = "1.4.21"
+    val kotlinVersion = "1.6.0"
     kotlin("jvm") version kotlinVersion
     kotlin("kapt") version kotlinVersion
-    id("com.github.johnrengelman.shadow") version "2.0.4"
+    id("com.github.johnrengelman.shadow") version "7.1.0"
     id("net.minecrell.plugin-yml.bukkit") version "0.3.0"
 }
 
@@ -23,16 +23,16 @@ repositories {
 }
 
 dependencies {
-    implementation(kotlin("stdlib-jdk8"))
+    implementation(kotlin("stdlib"))
     implementation(kotlin("reflect"))
     implementation("co.aikar:acf-paper:0.5.0-SNAPSHOT")
-    implementation("com.google.re2j:re2j:1.5")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.2")
+    implementation("com.google.re2j:re2j:1.6")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0-RC")
 
-    compileOnly("de.tr7zw:item-nbt-api-plugin:2.5.0")
-    compileOnly("org.spigotmc:spigot-api:1.15-R0.1-SNAPSHOT")
+    compileOnly("de.tr7zw:item-nbt-api-plugin:2.8.0")
+    compileOnly("org.spigotmc:spigot-api:1.17-R0.1-SNAPSHOT")
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.2.0-SNAPSHOT")
-    compileOnly("com.comphenix.protocol:ProtocolLib:4.5.0")
+    compileOnly("com.comphenix.protocol:ProtocolLib:4.7.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.3.1")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.3.1")
@@ -40,8 +40,8 @@ dependencies {
 
 bukkit {
     main = "redstonetools.RedstoneTools"
-    apiVersion = "1.15"
-    depend = listOf("WorldEdit")
+    apiVersion = "1.17"
+    depend = listOf("WorldEdit", "ProtocolLib", "NBTAPI")
 }
 
 tasks.test {
@@ -54,7 +54,7 @@ tasks.shadowJar {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
         javaParameters = true
         freeCompilerArgs = listOf(
             "-Xopt-in=kotlin.ExperimentalStdlibApi",
