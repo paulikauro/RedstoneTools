@@ -9,6 +9,8 @@ import com.comphenix.protocol.PacketType
 import com.comphenix.protocol.ProtocolManager
 import com.comphenix.protocol.wrappers.EnumWrappers
 import com.comphenix.protocol.wrappers.WrappedChatComponent
+import net.md_5.bungee.api.ChatMessageType
+import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.GameMode
 import org.bukkit.Material
 import org.bukkit.block.data.type.RedstoneWire
@@ -25,7 +27,6 @@ import java.util.*
 @Description("Get that there redstone automagically!")
 @CommandPermission("redstonetools.autowire")
 class Autowire(
-    private val protocolManager: ProtocolManager,
     private val pluginManager: PluginManager,
 ) : BaseCommand(), Listener {
     private val autos = mutableSetOf<UUID>()
@@ -42,23 +43,24 @@ class Autowire(
     }
 
     private fun Player.sendActionBarTitle(message: String) {
-        val titlePacket = protocolManager.createPacket(PacketType.Play.Server.TITLE).apply {
-            titleActions.write(0, EnumWrappers.TitleAction.ACTIONBAR)
-            chatComponents.write(0, WrappedChatComponent.fromText(message))
-        }
-        protocolManager.sendServerPacket(this, titlePacket)
+        spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent(message))
     }
 
     @EventHandler
     fun onLeaveEvent(event: PlayerQuitEvent) {
         autos.remove(event.player.uniqueId)
     }
+
     @EventHandler
     fun onAutoWireEvent(event: BlockPlaceEvent) {
-        if (event.player.uniqueId !in autos) return
-        if (event.player.gameMode != GameMode.CREATIVE) return
-        if (!event.block.blockData.material.isSolid) return
-        if (event.blockPlaced.type.hasGravity()) return
+        with(event) {
+            arrayOf(
+                player.uniqueId !in autos,
+                player.gameMode != GameMode.CREATIVE,
+                !block.blockData.material.isSolid,
+                blockPlaced.type.hasGravity(),
+            ).any { it }.ifTrue { return }
+        }
         val wirePosition = event.blockPlaced.location.add(0.0, 1.0, 0.0)
         if (wirePosition.block.type != Material.AIR) return
         val airState = wirePosition.block.state
@@ -74,10 +76,14 @@ class Autowire(
         pluginManager.callEvent(blockPlaceEvent)
         if (blockPlaceEvent.isCancelled) return
         wirePosition.block.type = Material.REDSTONE_WIRE
-        val wireData: RedstoneWire = Material.REDSTONE_WIRE.createBlockData() as RedstoneWire
+        val wireData = Material.REDSTONE_WIRE.createBlockData() as RedstoneWire
         wireData.allowedFaces.forEach {
             wireData.setFace(it, RedstoneWire.Connection.SIDE)
         }
         wirePosition.block.blockData = wireData
     }
+}
+
+private inline fun Boolean.ifTrue(block: () -> Unit) {
+    if (this) block()
 }

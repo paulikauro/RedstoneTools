@@ -39,7 +39,7 @@ class Slab : BaseCommand() {
     }
 
     private fun getSlab(type: String): ItemStack? {
-        val material = Material.getMaterial(type.toUpperCase()) ?: return null
+        val material = Material.getMaterial(type.uppercase()) ?: return null
         if (!material.isBlock) return null
         val blockData = material.createBlockData() as? Slab ?: return null
         val itemStack = ItemStack(material, 1)
@@ -73,10 +73,8 @@ class SlabListener : Listener {
 
 class SlabCompletionHandler :
     CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
-    override fun getCompletions(context: BukkitCommandCompletionContext?): MutableCollection<String> =
-        Material.values().filter {
-            it.isBlock && (it.createBlockData() is Slab)
-        }.map {
-            it.toString().toLowerCase()
-        }.toMutableList()
+    override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> = Material
+        .values()
+        .filter { it.isBlock && it.createBlockData() is Slab }
+        .map { it.toString().lowercase() }
 }

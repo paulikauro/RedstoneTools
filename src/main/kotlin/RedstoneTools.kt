@@ -16,7 +16,6 @@ import com.sk89q.worldedit.util.formatting.text.format.TextColor
 import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.plugin.java.JavaPlugin
-import java.util.*
 import java.util.logging.Level
 
 const val MAKE_SELECTION_FIRST = "Make a region selection first."
@@ -50,11 +49,11 @@ class RedstoneTools : JavaPlugin() {
         }
         val worldEdit = wePlugin.worldEdit
         val protocolManager = ProtocolLibrary.getProtocolManager()
-        val autowire = Autowire(protocolManager, server.pluginManager)
+        val autowire = Autowire(server.pluginManager)
         arrayOf(
             WorldEditHelper(this, worldEdit),
-            autowire,
             SlabListener(),
+            autowire,
         ).forEach { server.pluginManager.registerEvents(it, this) }
         PaperCommandManager(this).apply {
             arrayOf(
@@ -63,8 +62,10 @@ class RedstoneTools : JavaPlugin() {
                 "find_page" to FindPageCompletionHandler(),
                 "search_page" to SearchPageCompletionHandler(),
             ).forEach { (id, handler) -> commandCompletions.registerCompletion(id, handler) }
-            registerThing(SignalStrength)
-            registerThing(SignalContainer)
+            arrayOf(
+                SignalStrength,
+                SignalContainer,
+            ).forEach { registerThing(it) }
             setDefaultExceptionHandler(::handleCommandException, false)
             arrayOf(
                 RStack(worldEdit),
@@ -83,18 +84,19 @@ class RedstoneToolsException(message: String) : Exception(message)
 private interface Thing<T> {
     val readableName: String
     fun of(arg: String): T?
-    val values: List<String>
+    val values: Collection<String>
+    val valueClass: Class<T>
 }
 
-private inline fun <reified T> PaperCommandManager.registerThing(thing: Thing<T>) {
-    val name = thing.readableName.replace(" ", "_").toLowerCase()
+private fun <T> PaperCommandManager.registerThing(thing: Thing<T>) {
+    val name = thing.readableName.replace(" ", "_").lowercase()
     val errorMessage = "${thing.readableName} must be one of ${thing.values}"
-    commandContexts.registerContext(T::class.java) { context ->
+    commandContexts.registerContext(thing.valueClass) { context ->
         thing.of(context.popFirstArg()) ?: throw InvalidCommandArgument(errorMessage)
     }
     commandCompletions.apply {
         registerStaticCompletion(name, thing.values)
-        setDefaultCompletion(name, T::class.java)
+        setDefaultCompletion(name, thing.valueClass)
     }
 }
 
@@ -110,6 +112,7 @@ class SignalStrength(val value: Int) {
         private val hexValues = ('a'..'f').map(Char::toString)
         override val values = intValues + hexValues
         override val readableName = "Signal strength"
+        override val valueClass = SignalStrength::class.java
     }
 }
 
@@ -130,6 +133,7 @@ class SignalContainer(val material: Material) {
             ?.let { (_, material) -> SignalContainer(material) }
 
         override val readableName = "Container"
+        override val valueClass = SignalContainer::class.java
     }
 }
 
