@@ -31,7 +31,6 @@ dependencies {
     compileOnly("de.tr7zw:item-nbt-api-plugin:2.8.0")
     compileOnly("org.spigotmc:spigot-api:1.17-R0.1-SNAPSHOT")
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.2.0-SNAPSHOT")
-    compileOnly("com.comphenix.protocol:ProtocolLib:4.7.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.3.1")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.3.1")
@@ -40,7 +39,7 @@ dependencies {
 bukkit {
     main = "redstonetools.RedstoneTools"
     apiVersion = "1.17"
-    depend = listOf("WorldEdit", "ProtocolLib", "NBTAPI")
+    depend = listOf("WorldEdit", "NBTAPI")
 }
 
 tasks.test {

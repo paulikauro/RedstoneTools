@@ -1,10 +1,11 @@
 package redstonetools
 
 import co.aikar.commands.BaseCommand
+import co.aikar.commands.ConditionFailedException
 import co.aikar.commands.annotation.*
+import com.sk89q.worldedit.IncompleteRegionException
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.bukkit.BukkitAdapter
-import com.sk89q.worldedit.bukkit.BukkitPlayer
 import com.sk89q.worldedit.math.BlockVector3
 import org.bukkit.Bukkit
 import org.bukkit.block.Block
@@ -20,8 +21,13 @@ import java.util.*
 @CommandAlias("/livestack|/ls")
 @Description("Redstone live stacking command")
 @CommandPermission("redstonetools.livestack")
-class LiveStack(private val worldEdit: WorldEdit, private val plugin: Plugin) : BaseCommand(), Listener {
-    private val gonnaLiveStack = mutableSetOf<UUID>()
+class LiveStack(private val plugin: Plugin, private val worldEdit: WorldEdit) : BaseCommand(), Listener {
+    private val gonnaLiveStack = mutableMapOf<UUID, State>()
+
+    sealed interface State {
+        data class SelectingRoot(val blocks: List<BlockVector3>) : State
+        data class Enabled(val displacements: List<BlockVector3>) : State
+    }
 
     @Default
     fun livestack(player: Player) {
@@ -29,49 +35,61 @@ class LiveStack(private val worldEdit: WorldEdit, private val plugin: Plugin) : 
             gonnaLiveStack.remove(player.uniqueId)
             "Live Stack Disabled"
         } else {
-            gonnaLiveStack.add(player.uniqueId)
-            "Live Stack Enabled"
+            val wePlayer = BukkitAdapter.adapt(player)
+            // TODO: factor this out (shared with RStack)
+            val session = worldEdit.sessionManager.get(wePlayer)
+            val selectionWorld = session.selectionWorld ?: throw ConditionFailedException("no selection world !?")
+            val selection = try {
+                // TODO: is try catch needed?
+                session.getSelection(selectionWorld)
+            } catch (e: IncompleteRegionException) {
+                throw ConditionFailedException("You do not have a selection!")
+            }
+            val blocks = selection.filter { !selectionWorld.getBlock(it).blockType.material.isAir }
+            gonnaLiveStack[player.uniqueId] = State.SelectingRoot(blocks)
+            "Click to select root block"
         }.let { player.sendMessage(it) }
     }
 
     @EventHandler
     fun onLiveStackEvent(event: BlockPlaceEvent) {
-        if (event.player.uniqueId !in gonnaLiveStack) return
-        doLiveStack(BukkitAdapter.adapt(event.player), event.block)
+        val (displacements) = gonnaLiveStack[event.player.uniqueId] as? State.Enabled ?: return
+        doLiveStack(event.block, displacements)
     }
 
     @EventHandler
     fun onLiveStackEvent(event: BlockBreakEvent) {
-        if (event.player.uniqueId !in gonnaLiveStack) return
-        doLiveStack(BukkitAdapter.adapt(event.player), event.block)
+        when (val state = gonnaLiveStack[event.player.uniqueId]) {
+            is State.SelectingRoot -> {
+                val root = event.block.location.toBlockVector3()
+                gonnaLiveStack[event.player.uniqueId] = State.Enabled(
+                    displacements = state.blocks.map { it.subtract(root) }.filter { it != BlockVector3.ZERO }
+                )
+                event.isCancelled = true
+                event.player.sendMessage("root block selected")
+            }
+            is State.Enabled -> {
+                doLiveStack(event.block, state.displacements)
+            }
+            else -> Unit
+        }
     }
 
     @EventHandler
     fun onLiveStackEvent(event: PlayerInteractEvent) {
-        if (event.player.uniqueId !in gonnaLiveStack) return
+        val (displacements) = gonnaLiveStack[event.player.uniqueId] as? State.Enabled ?: return
         event.clickedBlock?.let {
-            doLiveStack(BukkitAdapter.adapt(event.player), it)
+            doLiveStack(it, displacements)
         }
     }
 
     private fun doLiveStack(
-        player: BukkitPlayer?,
         block: Block,
+        displacements: List<BlockVector3>,
     ) = Bukkit.getScheduler().runTask(plugin, Runnable {
-        val session = worldEdit.sessionManager.get(player)
-        val displacements = arrayOf(
-            BlockVector3.at(-2, -2, 0),
-            BlockVector3.at(-2, 2, 0),
-            BlockVector3.at(-4, 0, 0),
-        )
-        session.createEditSession(player).use { editSession ->
-            displacements.forEach {
-                editSession.setBlock(
-                    block.location.toBlockVector3().add(it),
-                    BukkitAdapter.adapt(block.blockData)
-                )
-            }
-            session.remember(editSession)
+        displacements.forEach {
+            val newBlock = block.location.add(it.x.toDouble(), it.y.toDouble(), it.z.toDouble()).block
+            newBlock.blockData = block.blockData
         }
     })
 }

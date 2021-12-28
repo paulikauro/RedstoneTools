@@ -47,9 +47,9 @@ class RedstoneTools : JavaPlugin() {
             return
         }
         val worldEdit = wePlugin.worldEdit
-        val autowire = Autowire(server.pluginManager)
+        val liveStack = LiveStack(this, worldEdit)
+        val autowire = Autowire(server.pluginManager, liveStack, this)
         val destroy = Destroy(worldEdit)
-        val liveStack = LiveStack(worldEdit, this)
         arrayOf(
             WorldEditHelper(this, worldEdit),
             SlabListener(),

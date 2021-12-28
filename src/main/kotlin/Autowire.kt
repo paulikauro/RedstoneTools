@@ -5,12 +5,9 @@ import co.aikar.commands.annotation.CommandAlias
 import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Default
 import co.aikar.commands.annotation.Description
-import com.comphenix.protocol.PacketType
-import com.comphenix.protocol.ProtocolManager
-import com.comphenix.protocol.wrappers.EnumWrappers
-import com.comphenix.protocol.wrappers.WrappedChatComponent
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
+import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Material
 import org.bukkit.block.data.type.RedstoneWire
@@ -20,6 +17,7 @@ import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.ItemStack
+import org.bukkit.plugin.Plugin
 import org.bukkit.plugin.PluginManager
 import java.util.*
 
@@ -28,6 +26,8 @@ import java.util.*
 @CommandPermission("redstonetools.autowire")
 class Autowire(
     private val pluginManager: PluginManager,
+    private val liveStack: LiveStack,
+    private val plugin: Plugin,
 ) : BaseCommand(), Listener {
     private val autos = mutableSetOf<UUID>()
 
@@ -81,6 +81,9 @@ class Autowire(
             wireData.setFace(it, RedstoneWire.Connection.SIDE)
         }
         wirePosition.block.blockData = wireData
+        Bukkit.getScheduler().runTask(plugin, Runnable {
+            liveStack.onLiveStackEvent(blockPlaceEvent)
+        })
     }
 }
 
