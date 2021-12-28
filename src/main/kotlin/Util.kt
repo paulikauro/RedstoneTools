@@ -1,7 +1,9 @@
 package redstonetools
 
+import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.util.formatting.text.TextComponent
 import com.sk89q.worldedit.util.formatting.text.format.TextColor
+import org.bukkit.Location
 
 fun TextComponent.getAllContent(): String =
     if (this.children().isEmpty()) {
@@ -23,3 +25,5 @@ fun String.withHighlightedReplacement(replacement: String): TextComponent =
             TextComponent.of(this.substringAfter(replacement))
                 .color(TextColor.WHITE)
         )
+
+fun Location.toBlockVector3(): BlockVector3 = BlockVector3.at(x, y, z)

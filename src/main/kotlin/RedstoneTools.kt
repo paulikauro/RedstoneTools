@@ -1,7 +1,6 @@
 package redstonetools
 
 import co.aikar.commands.*
-import com.comphenix.protocol.ProtocolLibrary
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.WorldEditException
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
@@ -48,12 +47,15 @@ class RedstoneTools : JavaPlugin() {
             return
         }
         val worldEdit = wePlugin.worldEdit
-        val protocolManager = ProtocolLibrary.getProtocolManager()
         val autowire = Autowire(server.pluginManager)
+        val destroy = Destroy(worldEdit)
+        val liveStack = LiveStack(worldEdit, this)
         arrayOf(
             WorldEditHelper(this, worldEdit),
             SlabListener(),
             autowire,
+            destroy,
+            liveStack,
         ).forEach { server.pluginManager.registerEvents(it, this) }
         PaperCommandManager(this).apply {
             arrayOf(
@@ -74,6 +76,8 @@ class RedstoneTools : JavaPlugin() {
                 Container(),
                 Slab(),
                 autowire,
+                destroy,
+                liveStack,
             ).forEach(::registerCommand)
         }
     }
