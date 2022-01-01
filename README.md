@@ -1,7 +1,7 @@
 # RedstoneTools
 A collection of tools (mostly WorldEdit-related) for working with redstone
 
-Depends on these plugins: Item NBT Api, ProtocolLib and WorldEdit
+Depends on these plugins: [Item-NBT-API](https://github.com/tr7zw/Item-NBT-API) and [WorldEdit](https://github.com/EngineHub/WorldEdit)
 
 # Commands
 ## `//rstack`
