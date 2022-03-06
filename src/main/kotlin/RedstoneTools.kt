@@ -50,12 +50,15 @@ class RedstoneTools : JavaPlugin() {
         val liveStack = LiveStack(this, worldEdit)
         val autowire = Autowire(server.pluginManager, liveStack, this)
         val destroy = Destroy(worldEdit)
+        val pins = PinCommand(this)
         arrayOf(
             WorldEditHelper(this, worldEdit),
             SlabListener(),
             autowire,
             destroy,
             liveStack,
+            // noo
+            pins.listener,
         ).forEach { server.pluginManager.registerEvents(it, this) }
         PaperCommandManager(this).apply {
             arrayOf(
@@ -63,9 +66,11 @@ class RedstoneTools : JavaPlugin() {
                 "we_mask" to MaskCompletionHandler(worldEdit),
                 "find_page" to FindPageCompletionHandler(),
                 "search_page" to SearchPageCompletionHandler(),
+                "pins" to pins.CompletionHandler(),
             ).forEach { (id, handler) -> commandCompletions.registerCompletion(id, handler) }
             arrayOf(
                 SignalStrength,
+                PinState,
                 SignalContainer,
             ).forEach { registerThing(it) }
             setDefaultExceptionHandler(::handleCommandException, false)
@@ -78,6 +83,7 @@ class RedstoneTools : JavaPlugin() {
                 autowire,
                 destroy,
                 liveStack,
+                pins,
             ).forEach(::registerCommand)
         }
     }
@@ -117,6 +123,26 @@ class SignalStrength(val value: Int) {
         override val values = intValues + hexValues
         override val readableName = "Signal strength"
         override val valueClass = SignalStrength::class.java
+    }
+}
+
+class PinState(val value: Boolean) {
+    override fun toString(): String = when (value) {
+        false -> "off"
+        true -> "on"
+    }
+
+    companion object : Thing<PinState> {
+        override val readableName = "Pin state"
+
+        override fun of(arg: String): PinState? = when (arg) {
+            "on" -> PinState(true)
+            "off" -> PinState(false)
+            else -> null
+        }
+
+        override val values = listOf("on", "off")
+        override val valueClass = PinState::class.java
     }
 }
 

@@ -44,8 +44,7 @@ class Destroy(private val worldEdit: WorldEdit) : BaseCommand(), Listener {
 
     @EventHandler
     fun onBlockBreak(event: BlockBreakEvent) {
-        if (event.player.uniqueId !in gonnaDestroy) return
-        gonnaDestroy.remove(event.player.uniqueId)
+        if (!gonnaDestroy.remove(event.player.uniqueId)) return
         event.isCancelled = true
         val blocksToDelete = search(event.block)
         val player = BukkitAdapter.adapt(event.player)
