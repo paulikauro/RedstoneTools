@@ -108,9 +108,9 @@ class SignalStrength(val value: Int) {
             else -> null
         }
 
-        private val intValues = (0..15).map(Int::toString)
-        private val hexValues = ('a'..'f').map(Char::toString)
-        override val values = intValues + hexValues
+        private val intValues = (0..31).map(Int::toString)
+        private val hexValues = (0..31).map(Integer::toHexString)
+        override val values = (intValues + hexValues).distinct().toList()
         override val readableName = "Signal strength"
         override val valueClass = SignalStrength::class.java
     }

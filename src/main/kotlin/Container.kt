@@ -46,24 +46,23 @@ class Container : BaseCommand() {
     }
 
     private fun NBTItem.addItems(power: Int, slots: Int) {
-        var itemsNeeded = itemsNeeded(power, slots)
+        val itemsNeeded = itemsNeeded(power, slots)
         if (itemsNeeded == 0) return
         addCompound("BlockEntityTag")
         val compound = getCompound("BlockEntityTag")
         val itemList = compound.getCompoundList("Items")
-        for (i in 1..(itemsNeeded / 64.toFloat() + 1).toInt()) {
-            itemList.addCompound().apply {
-                setByte("Count", min(itemsNeeded, 64).toByte())
-                setString("id", "minecraft:redstone")
-                setByte("Slot", (i - 1).toByte())
-            }
-            itemsNeeded -= 64
+        // this just applys 1 really big stack to the first slot of the container
+        // we dont care how it looks as long as it gives out the correct ss right?
+        itemList.addCompound().apply {
+            setByte("Count", itemsNeeded.toByte())
+            setString("id", "minecraft:redstone")
+            setByte("Slot", (0).toByte())
         }
     }
 
     private fun itemsNeeded(power: Int, available: Int): Int {
         if (power == 0) return 0
-        if (power == 15) return available * 64
+        //we dont really care about size if this equation is correct for all signal strengths
         return ceil((32 * available * power) / 7.toFloat() - 1).toInt()
     }
 
