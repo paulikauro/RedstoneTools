@@ -16,6 +16,7 @@ import com.sk89q.worldedit.util.formatting.text.format.TextColor
 import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.plugin.java.JavaPlugin
+import java.lang.NumberFormatException
 import java.util.logging.Level
 
 const val MAKE_SELECTION_FIRST = "Make a region selection first."
@@ -74,6 +75,7 @@ class RedstoneTools : JavaPlugin() {
                 Container(),
                 Slab(),
                 autowire,
+                QuickTP(),
             ).forEach(::registerCommand)
         }
     }
