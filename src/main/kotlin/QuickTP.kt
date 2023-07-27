@@ -16,7 +16,7 @@ import org.bukkit.util.Vector
 @CommandPermission("redstonetools.quicktp")
 class QuickTP : BaseCommand() {
     @Default
-    @Syntax("[distance]")
+    @Syntax("[distance] - the distance to teleport")
     fun quicktp(player: Player, @Default("32") distance: Int)
     {
         if (distance < 1 || distance > 64){

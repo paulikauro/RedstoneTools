@@ -21,7 +21,7 @@ import java.util.logging.Level
 
 const val MAKE_SELECTION_FIRST = "Make a region selection first."
 
-class RedstoneTools : JavaPlugin() {
+abstract class RedstoneTools : JavaPlugin() {
     private fun handleCommandException(
         command: BaseCommand,
         registeredCommand: RegisteredCommand<*>,
@@ -62,6 +62,7 @@ class RedstoneTools : JavaPlugin() {
                 "we_mask" to MaskCompletionHandler(worldEdit),
                 "find_page" to FindPageCompletionHandler(),
                 "search_page" to SearchPageCompletionHandler(),
+                "repeater" to RepeaterCompletionHandler(),
             ).forEach { (id, handler) -> commandCompletions.registerCompletion(id, handler) }
             arrayOf(
                 SignalStrength,
@@ -76,6 +77,7 @@ class RedstoneTools : JavaPlugin() {
                 Slab(),
                 autowire,
                 QuickTP(),
+                Repeater(this@RedstoneTools),
             ).forEach(::registerCommand)
         }
     }
