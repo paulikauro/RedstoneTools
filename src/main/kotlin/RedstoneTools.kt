@@ -84,6 +84,7 @@ class RedstoneTools : JavaPlugin() {
                 destroy,
                 liveStack,
                 pins,
+                SelectionStack(worldEdit),
             ).forEach(::registerCommand)
         }
     }
@@ -110,11 +111,11 @@ private fun <T> PaperCommandManager.registerThing(thing: Thing<T>) {
     }
 }
 
-class SignalStrength(val value: Int) {
+class SignalStrength(val value: Int, val originalName: String) {
     companion object : Thing<SignalStrength> {
-        override fun of(arg: String): SignalStrength? = when (arg) {
-            in hexValues -> SignalStrength(arg.toInt(16))
-            in intValues -> SignalStrength(arg.toInt())
+        override fun of(arg: String): SignalStrength? = when (arg.lowercase()) {
+            in hexValues -> SignalStrength(arg.toInt(16), arg)
+            in intValues -> SignalStrength(arg.toInt(), arg)
             else -> null
         }
 

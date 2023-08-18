@@ -22,10 +22,10 @@ class Container : BaseCommand() {
         container: SignalContainer,
         power: SignalStrength
     ) {
-        player.inventory.addItem(container.itemWithPower(power.value))
+        player.inventory.addItem(container.itemWithPower(power))
     }
 
-    private fun SignalContainer.itemWithPower(power: Int): ItemStack {
+    private fun SignalContainer.itemWithPower(power: SignalStrength): ItemStack {
         val slots = when (material) {
             Material.FURNACE -> 3
             Material.CHEST -> 27
@@ -37,11 +37,11 @@ class Container : BaseCommand() {
         // ItemMeta is never null because it's only null if material is air.
         itemStack.modifyMeta<ItemMeta> {
             setDisplayName(power.toString())
-            lore = listOf("Power $power")
+            lore = listOf("Power ${power.originalName}")
         }
         return NBTItem(itemStack).apply {
             addFakeEnchant()
-            addItems(power, slots)
+            addItems(power.value, slots)
         }.item
     }
 

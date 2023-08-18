@@ -1,10 +1,10 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = ""
-version = "1.3"
+version = "1.4"
 
 plugins {
-    val kotlinVersion = "1.6.0"
+    val kotlinVersion = "1.6.20-RC"
     kotlin("jvm") version kotlinVersion
     kotlin("kapt") version kotlinVersion
     id("com.github.johnrengelman.shadow") version "7.1.0"
@@ -26,7 +26,10 @@ dependencies {
     implementation(kotlin("reflect"))
     implementation("co.aikar:acf-paper:0.5.0-SNAPSHOT")
     implementation("com.google.re2j:re2j:1.6")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0-RC")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.0")
+    implementation("net.kyori:adventure-api:4.11.0")
+    implementation("net.kyori:adventure-text-serializer-gson:4.11.0")
 
     compileOnly("de.tr7zw:item-nbt-api-plugin:2.8.0")
     compileOnly("org.spigotmc:spigot-api:1.17-R0.1-SNAPSHOT")
@@ -56,7 +59,8 @@ tasks.withType<KotlinCompile> {
         javaParameters = true
         freeCompilerArgs = listOf(
             "-Xopt-in=kotlin.ExperimentalStdlibApi",
-            "-Xopt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
+            "-Xopt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
+            "-Xcontext-receivers",
         )
     }
 }
@@ -68,4 +72,3 @@ tasks.build {
 tasks.register("getVersion") {
     println(version)
 }
-

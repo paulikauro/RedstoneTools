@@ -13,10 +13,6 @@ import com.sk89q.worldedit.function.RegionMaskingFilter
 import com.sk89q.worldedit.function.mask.BlockCategoryMask
 import com.sk89q.worldedit.function.operation.Operations
 import com.sk89q.worldedit.function.visitor.RegionVisitor
-import com.sk89q.worldedit.util.formatting.component.InvalidComponentException
-import com.sk89q.worldedit.util.formatting.text.TextComponent
-import com.sk89q.worldedit.util.formatting.text.format.TextColor
-import com.sk89q.worldedit.util.formatting.text.serializer.gson.GsonComponentSerializer
 import com.sk89q.worldedit.world.block.BaseBlock
 import com.sk89q.worldedit.world.block.BlockCategories
 import org.bukkit.entity.Player
@@ -25,6 +21,11 @@ import kotlin.collections.HashMap
 import kotlin.math.ceil
 import com.google.re2j.Pattern
 import com.google.re2j.PatternSyntaxException
+import com.sk89q.worldedit.util.formatting.component.InvalidComponentException
+import com.sk89q.worldedit.util.formatting.text.TextComponent
+import com.sk89q.worldedit.util.formatting.text.format.TextColor
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
+import net.kyori.adventure.text.TextComponent as ATextComponent
 
 val searchResults = HashMap<UUID, MutableList<LocationContainer>>()
 
@@ -96,8 +97,8 @@ class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
         val compoundTag = baseBlock.nbtData ?: return null
         val lines = (1..4).map { i ->
             val textTag = compoundTag.value["Text$i"] as StringTag
-            val component = GsonComponentSerializer.INSTANCE.deserialize(textTag.value) as TextComponent
-            component.getAllContent()
+            val component = GsonComponentSerializer.gson().deserialize(textTag.value) as ATextComponent
+            component.content()
         }
 
         return lines
