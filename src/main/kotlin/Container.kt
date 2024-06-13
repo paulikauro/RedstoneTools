@@ -36,7 +36,7 @@ class Container : BaseCommand() {
         val itemStack = ItemStack(material, 1)
         // ItemMeta is never null because it's only null if material is air.
         itemStack.modifyMeta<ItemMeta> {
-            setDisplayName(power.toString())
+            setDisplayName("Power ${power.originalName}")
             lore = listOf("Power ${power.originalName}")
         }
         return NBTItem(itemStack).apply {
@@ -51,13 +51,15 @@ class Container : BaseCommand() {
         addCompound("BlockEntityTag")
         val compound = getCompound("BlockEntityTag")
         val itemList = compound.getCompoundList("Items")
-        for (i in 1..(itemsNeeded / 64.toFloat() + 1).toInt()) {
+        var slot = 0
+        while (itemsNeeded > 0) {
             itemList.addCompound().apply {
                 setByte("Count", min(itemsNeeded, 64).toByte())
                 setString("id", "minecraft:redstone")
-                setByte("Slot", (i - 1).toByte())
+                setByte("Slot", (slot).toByte())
             }
             itemsNeeded -= 64
+            slot++
         }
     }
 
