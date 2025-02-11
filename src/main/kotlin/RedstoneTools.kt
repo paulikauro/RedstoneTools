@@ -77,6 +77,7 @@ class RedstoneTools : JavaPlugin() {
             arrayOf(
                 RStack(worldEdit),
                 Find(worldEdit),
+                That(worldEdit),
                 SignSearch(worldEdit),
                 Container(),
                 Slab(),
