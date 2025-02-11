@@ -78,6 +78,8 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
         val maxX: Int
         val maxY: Int
 
+        /* MORE READABLE, SLOWER IMPLEMENTATION
+
         val expandDirection: BlockVector3
         val contractDirection: BlockVector3
         var edge: BlockVector3
@@ -151,6 +153,111 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
             }
         }
         selection.contract(contractDirection)
+        return true
+        */
+
+
+        // FASTER IMPLEMENTATION
+
+        when (face) {
+            0 -> {
+                minX = selection.minimumPoint.z
+                minY = selection.minimumPoint.y
+                maxX = selection.maximumPoint.z
+                maxY = selection.maximumPoint.y
+
+                selection.expand(BlockVector3.at(1, 0, 0))
+                for(x in minX..maxX) {
+                    for(y in minY..maxY) {
+                        isAir = world.getBlock(BlockVector3.at(selection.maximumPoint.x, y, x)).blockType.material.isAir
+                        if(!isAir)
+                            return false
+                    }
+                }
+                selection.contract(BlockVector3.at(-1, 0, 0))
+            }
+            1 -> {
+                minX = selection.minimumPoint.z
+                minY = selection.minimumPoint.y
+                maxX = selection.maximumPoint.z
+                maxY = selection.maximumPoint.y
+
+                selection.expand(BlockVector3.at(-1, 0, 0))
+                for(x in minX..maxX) {
+                    for(y in minY..maxY) {
+                        isAir = world.getBlock(BlockVector3.at(selection.minimumPoint.x, y, x)).blockType.material.isAir
+                        if(!isAir)
+                            return false
+                    }
+                }
+                selection.contract(BlockVector3.at(1, 0, 0))
+            }
+            2 -> {
+                minX = selection.minimumPoint.x
+                minY = selection.minimumPoint.z
+                maxX = selection.maximumPoint.x
+                maxY = selection.maximumPoint.z
+
+                selection.expand(BlockVector3.at(0, 1, 0))
+                for(x in minX..maxX) {
+                    for(y in minY..maxY) {
+                        isAir = world.getBlock(BlockVector3.at(x, selection.maximumPoint.y, y)).blockType.material.isAir
+                        if(!isAir)
+                            return false
+                    }
+                }
+                selection.contract(BlockVector3.at(0, -1, 0))
+            }
+            3 -> {
+                minX = selection.minimumPoint.x
+                minY = selection.minimumPoint.z
+                maxX = selection.maximumPoint.x
+                maxY = selection.maximumPoint.z
+
+                selection.expand(BlockVector3.at(0, -1, 0))
+                for(x in minX..maxX) {
+                    for(y in minY..maxY) {
+                        isAir = world.getBlock(BlockVector3.at(x, selection.minimumPoint.y, y)).blockType.material.isAir
+                        if(!isAir)
+                            return false
+                    }
+                }
+                selection.contract(BlockVector3.at(0, 1, 0))
+            }
+            4 -> {
+                minX = selection.minimumPoint.x
+                minY = selection.minimumPoint.y
+                maxX = selection.maximumPoint.x
+                maxY = selection.maximumPoint.y
+
+                selection.expand(BlockVector3.at(0, 0, 1))
+                for(x in minX..maxX) {
+                    for(y in minY..maxY) {
+                        isAir = world.getBlock(BlockVector3.at(x, y, selection.maximumPoint.z)).blockType.material.isAir
+                        if(!isAir)
+                            return false
+                    }
+                }
+                selection.contract(BlockVector3.at(0, 0, -1))
+            }
+            5 -> {
+                minX = selection.minimumPoint.x
+                minY = selection.minimumPoint.y
+                maxX = selection.maximumPoint.x
+                maxY = selection.maximumPoint.y
+
+                selection.expand(BlockVector3.at(0, 0, -1))
+                for(x in minX..maxX) {
+                    for(y in minY..maxY) {
+                        isAir = world.getBlock(BlockVector3.at(x, y, selection.minimumPoint.z)).blockType.material.isAir
+                        if(!isAir)
+                            return false
+                    }
+                }
+                selection.contract(BlockVector3.at(0, 0, 1))
+            }
+            else -> return false
+        }
         return true
     }
 }
