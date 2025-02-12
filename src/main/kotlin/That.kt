@@ -11,6 +11,8 @@ import com.sk89q.worldedit.util.formatting.text.TextComponent
 import com.sk89q.worldedit.world.World
 import org.bukkit.entity.Player
 
+private const val ITERATIONS_LIMIT = 160
+
 @CommandAlias("/that|/t|/hsel")
 @Description("Select the build you're looking at")
 @CommandPermission("redstonetools.that")
@@ -38,7 +40,7 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
         val session = worldEdit.sessionManager.get(player)
         val world = player.world
         val regionSelector = session.getRegionSelector(world)
-        val targetBlock = player.getBlockTrace(160)?.toVector()?.toBlockPoint() ?: return false
+        val targetBlock = player.getBlockTrace(ITERATIONS_LIMIT)?.toVector()?.toBlockPoint() ?: return false
 
         regionSelector.selectPrimary(targetBlock, null)
         regionSelector.selectSecondary(targetBlock, null)
@@ -55,7 +57,7 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
         var emptyFaces = 0
         var iterations = 0
 
-        while(emptyFaces != 6 && iterations < 160) {
+        while(emptyFaces != 6 && iterations < ITERATIONS_LIMIT) {
             iterations++
             emptyFaces = 0
 
