@@ -13,7 +13,7 @@ import org.bukkit.entity.Player
 
 private const val ITERATIONS_LIMIT = 160
 
-@CommandAlias("/that|/t|/hsel")
+@CommandAlias("/that|/hsel")
 @Description("Select the build you're looking at")
 @CommandPermission("redstonetools.that")
 class That(private val worldEdit: WorldEdit) : BaseCommand() {
