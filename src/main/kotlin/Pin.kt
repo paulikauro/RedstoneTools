@@ -124,23 +124,6 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
         }.let(player::sendMessage)
     }
 
-    @Subcommand("toggle")
-    @Description("Toggle the state of a pin")
-    @CommandPermission("redstonetools.pin.toggle")
-    @CommandCompletion("@pins")
-    fun toggle(player: Player, name: String) {
-        val pin = pins[player.uniqueId to name] ?: run {
-            player.sendMessage("No pin named $name")
-            return
-        }
-    
-        val result = pin.modifyState(Boolean::not) // Toggle the state
-        when (result) {
-            PinStateResult.OK -> player.sendMessage("Pin $name toggled!")
-            PinStateResult.DESTROYED -> player.sendMessage("Pin $name has been destroyed!")
-        }
-    }
-
     @Subcommand("pulse")
     @Description("Pulse a pin")
     @CommandPermission("redstonetools.pin.pulse")
@@ -170,6 +153,28 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
                 }
             }
         }, time * 2L)
+    }
+
+    @Subcommand("toggle")
+    @Description("Toggle pin state")
+    @CommandPermission("redstonetools.pin.toggle")
+    @CommandCompletion("@pins")
+    fun toggle(player: Player, name: String) {
+        val pin = pins[player.uniqueId to name] ?: run {
+            player.sendMessage("No pin named $name")
+            return
+        }
+
+        val block = pin.location.block
+        val lever = block.blockData as? Switch ?: run {
+            player.sendMessage("Pin $name has been destroyed!")
+            return
+        }
+
+        when (pin.setState(PinState(!lever.isPowered))) {
+            PinStateResult.OK -> player.sendMessage("Toggled $name to ${if ((PinState(!lever.isPowered)).value) "ON" else "OFF"}")
+            PinStateResult.DESTROYED -> player.sendMessage("Pin $name has been destroyed!")
+        }
     }
 }
 

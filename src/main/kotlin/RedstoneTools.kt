@@ -51,10 +51,14 @@ class RedstoneTools : JavaPlugin() {
         val autowire = Autowire(server.pluginManager, liveStack, this)
         val destroy = Destroy(worldEdit)
         val pins = PinCommand(this)
+        val autoRotate = AutoRotate(this)
+        val cauldron = Cauldron(this)
         arrayOf(
             WorldEditHelper(this, worldEdit),
             SlabListener(),
             autowire,
+            autoRotate,
+            cauldron,
             destroy,
             liveStack,
             // noo
@@ -81,6 +85,8 @@ class RedstoneTools : JavaPlugin() {
                 Container(),
                 Slab(),
                 autowire,
+                autoRotate,
+                cauldron,
                 destroy,
                 liveStack,
                 pins,
@@ -156,7 +162,8 @@ class SignalContainer(val material: Material) {
             "furnace" to Material.FURNACE,
             "chest" to Material.CHEST,
             "barrel" to Material.BARREL,
-            "hopper" to Material.HOPPER
+            "hopper" to Material.HOPPER,
+            "jukebox" to Material.JUKEBOX
         )
         override val values = materials.map { it.first }.sorted()
         override fun of(arg: String): SignalContainer? = materials
