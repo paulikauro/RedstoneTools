@@ -53,14 +53,12 @@ class RedstoneTools : JavaPlugin() {
         val autowire = Autowire(server.pluginManager, liveStack, this)
         val destroy = Destroy(worldEdit)
         val pins = PinCommand(this)
-        val autoRotate = AutoRotate()
-        val cauldron = Cauldron(this)
         arrayOf(
             WorldEditHelper(this, worldEdit),
             SlabListener(),
             autowire,
-            autoRotate,
-            cauldron,
+            AutoRotate(),
+            Cauldron(),
             destroy,
             liveStack,
             // noo
@@ -87,8 +85,8 @@ class RedstoneTools : JavaPlugin() {
                 Container(),
                 Slab(),
                 autowire,
-                autoRotate,
-                cauldron,
+                AutoRotate(),
+                Cauldron(),
                 destroy,
                 liveStack,
                 pins,

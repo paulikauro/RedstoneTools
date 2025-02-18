@@ -70,21 +70,17 @@ class AutoRotate : BaseCommand(), Listener {
         }
     }
 
-    private fun BlockFace.rotateHorizontal(): BlockFace {
-        return when (this) {
-            BlockFace.NORTH -> BlockFace.SOUTH
-            BlockFace.SOUTH -> BlockFace.NORTH
-            BlockFace.EAST -> BlockFace.WEST
-            BlockFace.WEST -> BlockFace.EAST
-            else -> this
-        }
+    private fun BlockFace.rotateHorizontal(): BlockFace = when (this) {
+        BlockFace.NORTH -> BlockFace.SOUTH
+        BlockFace.SOUTH -> BlockFace.NORTH
+        BlockFace.EAST -> BlockFace.WEST
+        BlockFace.WEST -> BlockFace.EAST
+        else -> this
     }
 
-    private fun BlockFace.rotateVertical(): BlockFace {
-        return when (this) {
-            BlockFace.UP -> BlockFace.DOWN
-            BlockFace.DOWN -> BlockFace.UP
-            else -> this
-        }
+    private fun BlockFace.rotateVertical(): BlockFace = when (this) {
+        BlockFace.UP -> BlockFace.DOWN
+        BlockFace.DOWN -> BlockFace.UP
+        else -> this
     }
 }

@@ -27,19 +27,18 @@ class Container : BaseCommand() {
         player.inventory.addItem(item)
     }
 
-    private fun SignalContainer.itemWithPower(power: Int): ItemStack {
-        return if (material == Material.JUKEBOX) {
-            createJukeboxWithDisk(power)
-        } else {
-            createContainerWithItems(power)
-        }
+    private fun SignalContainer.itemWithPower(power: Int): ItemStack = if (material == Material.JUKEBOX) {
+        createJukeboxWithDisk(power)
+    } else {
+        createContainerWithItems(power)
     }
 
     private fun SignalContainer.createJukeboxWithDisk(power: Int): ItemStack {
         val itemStack = ItemStack(material, 1)
+        // ItemMeta is never null because it's only null if material is air.
         itemStack.modifyMeta<ItemMeta> {
-            setDisplayName("Jukebox Power: $power")
-            lore = listOf("Power Level: $power")
+            setDisplayName("Power $power")
+            lore = listOf("Power $power")
         }
 
         val nbtItem = NBTItem(itemStack).apply {
@@ -58,10 +57,11 @@ class Container : BaseCommand() {
             Material.HOPPER -> 5
             else -> 0
         }
+        // ItemMeta is never null because it's only null if material is air.
         val itemStack = ItemStack(material, 1)
         itemStack.modifyMeta<ItemMeta> {
-            setDisplayName("Container Power: $power")
-            lore = listOf("Power Level: $power")
+            setDisplayName("Power $power")
+            lore = listOf("Power $power")
         }
 
         val nbtItem = NBTItem(itemStack).apply {

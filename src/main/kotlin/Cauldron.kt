@@ -14,13 +14,12 @@ import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.EquipmentSlot
-import org.bukkit.plugin.Plugin
 import java.util.*
 
 @CommandAlias("cauldron")
 @Description("Toggles cauldron water level adjustment mode.")
 @CommandPermission("redstonetools.cauldron")
-class Cauldron(private val plugin: Plugin) : BaseCommand(), Listener {
+class Cauldron() : BaseCommand(), Listener {
     private val enabledPlayers = mutableSetOf<UUID>()
 
     @Default
@@ -50,10 +49,10 @@ class Cauldron(private val plugin: Plugin) : BaseCommand(), Listener {
         if (event.hand != EquipmentSlot.HAND) return
         if (event.item != null) return
         val block = event.clickedBlock ?: return
-        if (block.type == Material.CAULDRON || block.type == Material.WATER_CAULDRON) {
-            event.isCancelled = true
-            adjustCauldron(block, player)
-        }
+        if (block.type != Material.CAULDRON && block.type != Material.WATER_CAULDRON) return
+
+        event.isCancelled = true
+        adjustCauldron(block, player)
     }
 
     private fun adjustCauldron(block: Block, player: Player) {
@@ -61,27 +60,24 @@ class Cauldron(private val plugin: Plugin) : BaseCommand(), Listener {
             block.type = Material.WATER_CAULDRON
             val newData = block.blockData as Levelled
             newData.level = 1
-            block.blockData = newData
-            block.state.update(true, false)
-            block.world.playSound(block.location, Sound.ITEM_BUCKET_FILL, 1.0f, 1.0f)
-            player.sendActionBar("Cauldron water level: 1")
+            updateCauldron(block, newData, player, Sound.ITEM_BUCKET_FILL, "Cauldron water level: 1")
             return
         }
 
         val cauldronData = block.blockData as? Levelled ?: return
         if (cauldronData.level < cauldronData.maximumLevel) {
             cauldronData.level++
+            updateCauldron(block, cauldronData, player, Sound.ITEM_BUCKET_FILL, "Cauldron water level: ${cauldronData.level}")
         } else {
             block.type = Material.CAULDRON
-            block.state.update(true, false)
-            block.world.playSound(block.location, Sound.ITEM_BUCKET_EMPTY, 1.0f, 1.0f)
-            player.sendActionBar("Cauldron water level: 0") //xd
-            return
+            updateCauldron(block, null, player, Sound.ITEM_BUCKET_EMPTY, "Cauldron emptied")
         }
+    }
 
-        block.blockData = cauldronData
+    private fun updateCauldron(block: Block, newData: Levelled?, player: Player, sound: Sound, message: String) {
+        if (newData != null) block.blockData = newData
         block.state.update(true, false)
-        block.world.playSound(block.location, Sound.ITEM_BUCKET_FILL, 1.0f, 1.0f)
-        player.sendActionBar("Cauldron water level: ${cauldronData.level}")
+        block.world.playSound(block.location, sound, 1.0f, 1.0f)
+        player.sendActionBar(message)
     }
 }

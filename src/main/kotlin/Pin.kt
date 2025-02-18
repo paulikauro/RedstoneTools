@@ -171,8 +171,9 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
             return
         }
 
-        when (pin.setState(PinState(!lever.isPowered))) {
-            PinStateResult.OK -> player.sendMessage("Toggled $name to ${if ((PinState(!lever.isPowered)).value) "ON" else "OFF"}")
+        val newState = PinState(!lever.isPowered) // Toggle the state
+        when (pin.setState(newState)) {
+            PinStateResult.OK -> player.sendMessage("Toggled $name to $newState")
             PinStateResult.DESTROYED -> player.sendMessage("Pin $name has been destroyed!")
         }
     }
