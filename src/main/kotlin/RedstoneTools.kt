@@ -12,8 +12,10 @@ import com.sk89q.worldedit.util.formatting.text.TextComponent
 import com.sk89q.worldedit.util.formatting.text.event.ClickEvent
 import com.sk89q.worldedit.util.formatting.text.event.HoverEvent
 import com.sk89q.worldedit.util.formatting.text.format.TextColor
+import net.md_5.bungee.api.ChatMessageType
 import org.bukkit.ChatColor
 import org.bukkit.Material
+import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.logging.Level
 
@@ -51,7 +53,7 @@ class RedstoneTools : JavaPlugin() {
         val autowire = Autowire(server.pluginManager, liveStack, this)
         val destroy = Destroy(worldEdit)
         val pins = PinCommand(this)
-        val autoRotate = AutoRotate(this)
+        val autoRotate = AutoRotate()
         val cauldron = Cauldron(this)
         arrayOf(
             WorldEditHelper(this, worldEdit),
@@ -94,6 +96,10 @@ class RedstoneTools : JavaPlugin() {
             ).forEach(::registerCommand)
         }
     }
+}
+
+fun Player.sendActionBar(message: String) {
+    spigot().sendMessage(ChatMessageType.ACTION_BAR, net.md_5.bungee.api.chat.TextComponent(message))
 }
 
 class RedstoneToolsException(message: String) : Exception(message)

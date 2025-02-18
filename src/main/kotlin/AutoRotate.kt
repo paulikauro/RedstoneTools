@@ -2,42 +2,37 @@ package redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
-import net.md_5.bungee.api.ChatMessageType
-import net.md_5.bungee.api.chat.TextComponent
-import org.bukkit.*
+import co.aikar.commands.annotation.Optional
+import org.bukkit.Material
 import org.bukkit.block.BlockFace
 import org.bukkit.block.data.Directional
-import org.bukkit.block.data.Orientable
-import org.bukkit.block.data.type.Comparator
-import org.bukkit.block.data.type.Observer
-import org.bukkit.block.data.type.Repeater
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.player.PlayerQuitEvent
-import org.bukkit.plugin.Plugin
 import java.util.*
 
 @CommandAlias("autorotate|ar")
-@Description("Automatically rotates specific redstone components by 180° when placed.")
+@Description("Automatically rotates specific redstone components when placed.")
 @CommandPermission("redstonetools.autorotate")
-class AutoRotate(private val plugin: Plugin) : BaseCommand(), Listener {
-    private val enabledPlayers = mutableSetOf<UUID>()
+class AutoRotate : BaseCommand(), Listener {
+    private val enabledPlayers = mutableMapOf<UUID, String>()
 
     @Default
-    fun toggleAutoRotate(player: Player) {
-        val message = if (enabledPlayers.remove(player.uniqueId)) {
-            "Auto Rotate Disabled"
-        } else {
-            enabledPlayers.add(player.uniqueId)
-            "Auto Rotate Enabled"
-        }
-        player.sendActionBar(message)
-    }
+    @CommandCompletion("horizontal|vertical")
+    fun toggleAutoRotate(player: Player, @Optional mode: String?) {
+        val rotationMode = mode ?: "horizontal" // Default mode is horizontal
+        val key = player.uniqueId
 
-    private fun Player.sendActionBar(message: String) {
-        spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent(message))
+        val message = if (enabledPlayers.remove(key) != null) {
+            "Auto Rotate ($rotationMode) Disabled"
+        } else {
+            enabledPlayers[key] = rotationMode
+            "Auto Rotate ($rotationMode) Enabled"
+        }
+
+        player.sendActionBar(message)
     }
 
     @EventHandler
@@ -48,47 +43,48 @@ class AutoRotate(private val plugin: Plugin) : BaseCommand(), Listener {
     @EventHandler
     fun onBlockPlace(event: BlockPlaceEvent) {
         val player = event.player
-        if (player.uniqueId !in enabledPlayers) return
-
+        val rotationMode = enabledPlayers[player.uniqueId] ?: return
         val block = event.block
         val blockData = block.blockData
 
-        when (blockData) {
-            is Repeater, is Comparator, is Observer -> {
-                if (blockData is Directional) {
-                    blockData.facing = blockData.facing.rotate180()
-                    block.blockData = blockData
-                }
-            }
-            is Orientable -> {
-                blockData.axis = blockData.axis.rotate180()
-                block.blockData = blockData
-            }
-            is Directional -> {
-                if (block.type == Material.PISTON || block.type == Material.STICKY_PISTON) {
-                    blockData.facing = blockData.facing.rotate180()
-                    block.blockData = blockData
-                }
-            }
+        val horizontalRotatable = setOf(
+            Material.REPEATER,
+            Material.COMPARATOR,
+            Material.OBSERVER,
+            Material.PISTON,
+            Material.STICKY_PISTON
+        )
+
+        val verticalRotatable = setOf(
+            Material.PISTON,
+            Material.STICKY_PISTON,
+            Material.OBSERVER
+        )
+
+        if (block.type in horizontalRotatable && blockData is Directional && rotationMode == "horizontal") {
+            blockData.facing = blockData.facing.rotateHorizontal()
+            block.blockData = blockData
+        } else if (block.type in verticalRotatable && blockData is Directional && rotationMode == "vertical") {
+            blockData.facing = blockData.facing.rotateVertical()
+            block.blockData = blockData
         }
     }
 
-    private fun BlockFace.rotate180(): BlockFace {
+    private fun BlockFace.rotateHorizontal(): BlockFace {
         return when (this) {
             BlockFace.NORTH -> BlockFace.SOUTH
             BlockFace.SOUTH -> BlockFace.NORTH
             BlockFace.EAST -> BlockFace.WEST
             BlockFace.WEST -> BlockFace.EAST
-            BlockFace.UP, BlockFace.DOWN -> this
             else -> this
         }
     }
 
-    private fun Axis.rotate180(): Axis {
+    private fun BlockFace.rotateVertical(): BlockFace {
         return when (this) {
-            Axis.X -> Axis.X
-            Axis.Z -> Axis.Z
-            Axis.Y -> Axis.Y
+            BlockFace.UP -> BlockFace.DOWN
+            BlockFace.DOWN -> BlockFace.UP
+            else -> this
         }
     }
 }

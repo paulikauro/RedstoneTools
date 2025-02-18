@@ -33,17 +33,14 @@ class Autowire(
 
     @Default
     fun toggleAutowire(player: Player) {
-        if (player.uniqueId in autos) {
-            autos.remove(player.uniqueId)
-            "Auto Wire Disabled"
-        } else {
-            autos.add(player.uniqueId)
-            "Auto Wire Enabled"
-        }.let { player.sendActionBarTitle(it) }
-    }
-
-    private fun Player.sendActionBarTitle(message: String) {
-        spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent(message))
+        player.sendActionBar(
+            if (autos.remove(player.uniqueId)) {
+                "Auto wire Disabled"
+            } else {
+                autos.add(player.uniqueId)
+                "Auto wire Enabled"
+            }
+        )
     }
 
     @EventHandler
