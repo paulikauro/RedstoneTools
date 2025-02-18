@@ -21,6 +21,8 @@ import kotlin.collections.HashMap
 import kotlin.math.ceil
 import com.google.re2j.Pattern
 import com.google.re2j.PatternSyntaxException
+import com.sk89q.jnbt.CompoundTag
+import com.sk89q.jnbt.ListTag
 import com.sk89q.worldedit.util.formatting.component.InvalidComponentException
 import com.sk89q.worldedit.util.formatting.text.TextComponent
 import com.sk89q.worldedit.util.formatting.text.format.TextColor
@@ -95,8 +97,11 @@ class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
 
     private fun parseMatch(baseBlock: BaseBlock, pattern: Pattern): TextComponent? {
         val compoundTag = baseBlock.nbtData ?: return null
-        val lines = (1..4).map { i ->
-            val textTag = compoundTag.value["Text$i"] as StringTag
+        val front = (compoundTag.value["front_text"] as CompoundTag).value["messages"] as ListTag
+        val back = (compoundTag.value["back_text"] as CompoundTag).value["messages"] as ListTag
+        val messages = front.value + back.value
+        val lines = messages.map { i ->
+            val textTag = i as StringTag
             val component = GsonComponentSerializer.gson().deserialize(textTag.value) as ATextComponent
             component.content()
         }
