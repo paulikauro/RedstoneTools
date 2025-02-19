@@ -6,6 +6,7 @@ import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.event.platform.PlayerInputEvent
 import com.sk89q.worldedit.util.eventbus.Subscribe
 import org.bukkit.Bukkit
+import org.bukkit.ChatColor
 import org.bukkit.ChatColor.*
 import org.bukkit.entity.Player
 import org.bukkit.event.Listener
@@ -59,6 +60,19 @@ class WorldEditHelper(plugin: JavaPlugin, private val worldEdit: WorldEdit) : Li
                 else -> DARK_RED
             }
             add("   $chatColor$volume")
+            add("${DARK_GREEN}Dimensions:")
+            val dimensionsX = bvMax.blockX - bvMin.blockX + 1
+            val dimensionsY = bvMax.blockY - bvMin.blockY + 1
+            val dimensionsZ = bvMax.blockZ - bvMin.blockZ + 1
+            fun getBlockColors(dimensionsX: Int, dimensionsY: Int, dimensionsZ: Int): List<String> {
+                val colorRanges = listOf(50 to GREEN, 75 to YELLOW, 100 to RED)
+                fun getColor(dim: Int): ChatColor {
+                    return colorRanges.firstOrNull { dim < it.first }?.second ?: DARK_RED
+                }
+                return listOf(dimensionsX, dimensionsY, dimensionsZ).map { dim -> "${getColor(dim)}$dim" }
+            }
+            val results = getBlockColors(dimensionsX, dimensionsY, dimensionsZ)
+            add("   ${results[0]}$WHITEx${results[1]}$WHITEx${results[2]}")
         }
         player.scoreboard = Bukkit.getScoreboardManager()!!.newScoreboard.apply {
             registerNewObjective(
