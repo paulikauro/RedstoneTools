@@ -54,15 +54,13 @@ class RedstoneTools : JavaPlugin() {
         val destroy = Destroy(worldEdit)
         val pins = PinCommand(this)
         val autoRotate = AutoRotate()
-        val cauldron = Cauldron(this)
+        val cauldron = Cauldron()
         arrayOf(
             WorldEditHelper(this, worldEdit),
             SlabListener(),
             autowire,
             autoRotate,
             cauldron,
-            AutoRotate(),
-            Cauldron(),
             destroy,
             liveStack,
             // noo
@@ -91,8 +89,6 @@ class RedstoneTools : JavaPlugin() {
                 autowire,
                 autoRotate,
                 cauldron,
-                AutoRotate(),
-                Cauldron(),
                 destroy,
                 liveStack,
                 pins,
@@ -149,6 +145,8 @@ class PinState(val value: Boolean) {
         true -> "on"
     }
 
+    fun not(): PinState = PinState(!value)
+
     companion object : Thing<PinState> {
         override val readableName = "Pin state"
 
@@ -173,7 +171,7 @@ class SignalContainer(val material: Material) {
             "chest" to Material.CHEST,
             "barrel" to Material.BARREL,
             "hopper" to Material.HOPPER,
-            "jukebox" to Material.JUKEBOX
+            "jukebox" to Material.JUKEBOX,
         )
         override val values = materials.map { it.first }.sorted()
         override fun of(arg: String): SignalContainer? = materials

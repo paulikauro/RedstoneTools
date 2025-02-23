@@ -2,7 +2,6 @@ package redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
-import co.aikar.commands.annotation.Optional
 import org.bukkit.Material
 import org.bukkit.block.BlockFace
 import org.bukkit.block.data.Directional
@@ -17,21 +16,19 @@ import java.util.*
 @Description("Automatically rotates specific redstone components when placed.")
 @CommandPermission("redstonetools.autorotate")
 class AutoRotate : BaseCommand(), Listener {
-    private val enabledPlayers = mutableMapOf<UUID, String>()
+    private val enabledPlayers = mutableSetOf<UUID>()
+    private val rotatable = setOf(
+        Material.REPEATER, Material.COMPARATOR, Material.OBSERVER, Material.PISTON, Material.STICKY_PISTON
+    )
 
     @Default
-    @CommandCompletion("horizontal|vertical")
-    fun toggleAutoRotate(player: Player, @Optional mode: String?) {
-        val rotationMode = mode ?: "horizontal" // Default mode is horizontal
-        val key = player.uniqueId
-
-        val message = if (enabledPlayers.remove(key) != null) {
-            "Auto Rotate ($rotationMode) Disabled"
+    fun toggleAutoRotate(player: Player) {
+        val message = if (enabledPlayers.remove(player.uniqueId)) {
+            "Auto Rotate Disabled"
         } else {
-            enabledPlayers[key] = rotationMode
-            "Auto Rotate ($rotationMode) Enabled"
+            enabledPlayers.add(player.uniqueId)
+            "Auto Rotate Enabled"
         }
-
         player.sendActionBar(message)
     }
 
@@ -43,44 +40,11 @@ class AutoRotate : BaseCommand(), Listener {
     @EventHandler
     fun onBlockPlace(event: BlockPlaceEvent) {
         val player = event.player
-        val rotationMode = enabledPlayers[player.uniqueId] ?: return
+        if (player.uniqueId !in enabledPlayers) return
         val block = event.block
         val blockData = block.blockData
-
-        val horizontalRotatable = setOf(
-            Material.REPEATER,
-            Material.COMPARATOR,
-            Material.OBSERVER,
-            Material.PISTON,
-            Material.STICKY_PISTON
-        )
-
-        val verticalRotatable = setOf(
-            Material.PISTON,
-            Material.STICKY_PISTON,
-            Material.OBSERVER
-        )
-
-        if (block.type in horizontalRotatable && blockData is Directional && rotationMode == "horizontal") {
-            blockData.facing = blockData.facing.rotateHorizontal()
-            block.blockData = blockData
-        } else if (block.type in verticalRotatable && blockData is Directional && rotationMode == "vertical") {
-            blockData.facing = blockData.facing.rotateVertical()
-            block.blockData = blockData
-        }
-    }
-
-    private fun BlockFace.rotateHorizontal(): BlockFace = when (this) {
-        BlockFace.NORTH -> BlockFace.SOUTH
-        BlockFace.SOUTH -> BlockFace.NORTH
-        BlockFace.EAST -> BlockFace.WEST
-        BlockFace.WEST -> BlockFace.EAST
-        else -> this
-    }
-
-    private fun BlockFace.rotateVertical(): BlockFace = when (this) {
-        BlockFace.UP -> BlockFace.DOWN
-        BlockFace.DOWN -> BlockFace.UP
-        else -> this
+        if (blockData !is Directional || block.type !in rotatable) return
+        blockData.facing = blockData.facing.oppositeFace
+        block.blockData = blockData
     }
 }

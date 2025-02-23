@@ -23,75 +23,49 @@ class Container : BaseCommand() {
         container: SignalContainer,
         power: SignalStrength
     ) {
-        val item = container.itemWithPower(power.value)
-        player.inventory.addItem(item)
+        player.inventory.addItem(container.itemWithPower(power))
     }
 
-    private fun SignalContainer.itemWithPower(power: Int): ItemStack = if (material == Material.JUKEBOX) {
-        createJukeboxWithDisk(power)
-    } else {
-        createContainerWithItems(power)
-    }
-
-    private fun SignalContainer.createJukeboxWithDisk(power: Int): ItemStack {
+    private fun SignalContainer.itemWithPower(power: SignalStrength): ItemStack {
         val itemStack = ItemStack(material, 1)
         // ItemMeta is never null because it's only null if material is air.
         itemStack.modifyMeta<ItemMeta> {
-            setDisplayName("Power $power")
-            lore = listOf("Power $power")
+            setDisplayName("Power ${power.originalName}")
+            lore = listOf("Power ${power.originalName}")
         }
 
-        val nbtItem = NBTItem(itemStack).apply {
+        return NBTItem(itemStack).apply {
             addFakeEnchant()
-            addDisk(power)
-        }
-
-        return nbtItem.item
-    }
-
-    private fun SignalContainer.createContainerWithItems(power: Int): ItemStack {
-        val slots = when (material) {
-            Material.FURNACE -> 3
-            Material.CHEST -> 27
-            Material.BARREL -> 27
-            Material.HOPPER -> 5
-            else -> 0
-        }
-        // ItemMeta is never null because it's only null if material is air.
-        val itemStack = ItemStack(material, 1)
-        itemStack.modifyMeta<ItemMeta> {
-            setDisplayName("Power $power")
-            lore = listOf("Power $power")
-        }
-
-        val nbtItem = NBTItem(itemStack).apply {
-            addFakeEnchant()
-            addItems(power, slots)
-        }
-
-        return nbtItem.item
+            if (material == Material.JUKEBOX) {
+                addDisk(power.value)
+            } else {
+                val slots = when (material) {
+                    Material.FURNACE -> 3
+                    Material.CHEST -> 27
+                    Material.BARREL -> 27
+                    Material.HOPPER -> 5
+                    else -> throw RedstoneToolsException("Unknown material, this is a bug")
+                }
+                addItems(power.value, slots)
+            }
+        }.item
     }
 
     private fun NBTItem.addItems(power: Int, slots: Int) {
         var itemsNeeded = itemsNeeded(power, slots)
         if (itemsNeeded == 0) return
-        addCompound("BlockEntityTag")
-        val compound = getCompound("BlockEntityTag")
-        val itemList = compound.getCompoundList("Items")
-
-        for (i in 1..(itemsNeeded / 64.toFloat() + 1).toInt()) {
+        val itemList = addCompound("BlockEntityTag").getCompoundList("Items")
+        for (i in 0..(itemsNeeded / 64.toFloat()).toInt()) {
             itemList.addCompound().apply {
                 setByte("Count", min(itemsNeeded, 64).toByte())
                 setString("id", "minecraft:redstone")
-                setByte("Slot", (i - 1).toByte())
+                setByte("Slot", i.toByte())
             }
             itemsNeeded -= 64
         }
     }
 
     private fun NBTItem.addDisk(power: Int) {
-        if (power == 0) return
-
         val diskId = when (power) {
             1 -> "minecraft:music_disc_13"
             2 -> "minecraft:music_disc_cat"
@@ -111,18 +85,18 @@ class Container : BaseCommand() {
             else -> return
         }
 
-        addCompound("BlockEntityTag")
-        val compound = getCompound("BlockEntityTag")
-        val recordItem = compound.addCompound("RecordItem")
-
-        recordItem.setString("id", diskId)
-        recordItem.setByte("Count", 1)
-        compound.setBoolean("has_record", true)
+        addCompound("BlockEntityTag").apply {
+            addCompound("RecordItem").apply {
+                setString("id", diskId)
+                setByte("Count", 1)
+            }
+            setBoolean("has_record", true)
+        }
     }
 
-    private fun itemsNeeded(power: Int, available: Int): Int {
+    private fun itemsNeeded(power: Int, slots: Int): Int {
         if (power == 0) return 0
-        if (power == 15) return available * 64
-        return ceil((32 * available * power) / 7.toFloat() - 1).toInt()
+        if (power == 15) return slots * 64
+        return ceil((32 * slots * power) / 7.toFloat() - 1).toInt()
     }
 }

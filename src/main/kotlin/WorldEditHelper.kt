@@ -61,18 +61,15 @@ class WorldEditHelper(plugin: JavaPlugin, private val worldEdit: WorldEdit) : Li
             }
             add("   $chatColor$volume")
             add("${DARK_GREEN}Dimensions:")
-            val dimensionsX = bvMax.blockX - bvMin.blockX + 1
-            val dimensionsY = bvMax.blockY - bvMin.blockY + 1
-            val dimensionsZ = bvMax.blockZ - bvMin.blockZ + 1
-            fun getBlockColors(dimensionsX: Int, dimensionsY: Int, dimensionsZ: Int): List<String> {
-                val colorRanges = listOf(50 to GREEN, 75 to YELLOW, 100 to RED)
-                fun getColor(dim: Int): ChatColor {
-                    return colorRanges.firstOrNull { dim < it.first }?.second ?: DARK_RED
-                }
-                return listOf(dimensionsX, dimensionsY, dimensionsZ).map { dim -> "${getColor(dim)}$dim" }
+            fun color(x: Int) = when {
+                x < 50 -> GREEN
+                x < 75 -> YELLOW
+                x < 100 -> RED
+                else -> DARK_RED
             }
-            val results = getBlockColors(dimensionsX, dimensionsY, dimensionsZ)
-            add("   ${results[0]}$WHITEx${results[1]}$WHITEx${results[2]}")
+            val line = with(selection) { arrayOf(width, height, length) }
+                .joinToString(separator = "${WHITE}x") { "${color(it)}$it" }
+            add("   $line")
         }
         player.scoreboard = Bukkit.getScoreboardManager()!!.newScoreboard.apply {
             registerNewObjective(
