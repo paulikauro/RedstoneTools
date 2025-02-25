@@ -21,19 +21,18 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
     @Syntax("")
     fun that(
         player: Player,
-        args: Array<String>)
-    {
+        args: Array<String>
+    ) {
         if (args.isNotEmpty()) {
             throw ConditionFailedException("Too many arguments!")
         }
 
         val weplayer = BukkitAdapter.adapt(player)
 
-        if(selectTargetBlock(weplayer)) {
+        if (selectTargetBlock(weplayer)) {
             growSelection(weplayer)
             weplayer.printInfo(TextComponent.of("Build selected."))
-        }
-        else weplayer.printError(TextComponent.of("No build in sight!"))
+        } else weplayer.printError(TextComponent.of("No build in sight!"))
     }
 
     private fun selectTargetBlock(player: WEPlayer): Boolean {
@@ -57,16 +56,16 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
         var emptyFaces = 0
         var iterations = 0
 
-        while(emptyFaces != 6 && iterations < ITERATIONS_LIMIT) {
+        while (emptyFaces != 6 && iterations < ITERATIONS_LIMIT) {
             iterations++
             emptyFaces = 0
 
-            if(checkFace(world, selection, 0)) emptyFaces++ // +X
-            if(checkFace(world, selection, 1)) emptyFaces++ // -X
-            if(checkFace(world, selection, 2)) emptyFaces++ // +Y
-            if(checkFace(world, selection, 3)) emptyFaces++ // -Y
-            if(checkFace(world, selection, 4)) emptyFaces++ // +Z
-            if(checkFace(world, selection, 5)) emptyFaces++ // -Z
+            if (checkFace(world, selection, 0)) emptyFaces++ // +X
+            if (checkFace(world, selection, 1)) emptyFaces++ // -X
+            if (checkFace(world, selection, 2)) emptyFaces++ // +Y
+            if (checkFace(world, selection, 3)) emptyFaces++ // -Y
+            if (checkFace(world, selection, 4)) emptyFaces++ // +Z
+            if (checkFace(world, selection, 5)) emptyFaces++ // -Z
         }
 
         regionSelector.learnChanges()
@@ -80,7 +79,8 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
         val maxX: Int
         val maxY: Int
 
-        /* MORE READABLE, SLOWER IMPLEMENTATION
+        // MORE READABLE, SLOWER IMPLEMENTATION
+        /*
 
         val expandDirection: BlockVector3
         val contractDirection: BlockVector3
@@ -95,6 +95,7 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
                 expandDirection = BlockVector3.at(1, 0, 0)
                 contractDirection = BlockVector3.at(-1, 0, 0)
             }
+
             1 -> {
                 minX = selection.minimumPoint.z
                 minY = selection.minimumPoint.y
@@ -103,6 +104,7 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
                 expandDirection = BlockVector3.at(-1, 0, 0)
                 contractDirection = BlockVector3.at(1, 0, 0)
             }
+
             2 -> {
                 minX = selection.minimumPoint.x
                 minY = selection.minimumPoint.z
@@ -111,6 +113,7 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
                 expandDirection = BlockVector3.at(0, 1, 0)
                 contractDirection = BlockVector3.at(0, -1, 0)
             }
+
             3 -> {
                 minX = selection.minimumPoint.x
                 minY = selection.minimumPoint.z
@@ -119,6 +122,7 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
                 expandDirection = BlockVector3.at(0, -1, 0)
                 contractDirection = BlockVector3.at(0, 1, 0)
             }
+
             4 -> {
                 minX = selection.minimumPoint.x
                 minY = selection.minimumPoint.y
@@ -127,6 +131,7 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
                 expandDirection = BlockVector3.at(0, 0, 1)
                 contractDirection = BlockVector3.at(0, 0, -1)
             }
+
             5 -> {
                 minX = selection.minimumPoint.x
                 minY = selection.minimumPoint.y
@@ -135,12 +140,13 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
                 expandDirection = BlockVector3.at(0, 0, -1)
                 contractDirection = BlockVector3.at(0, 0, 1)
             }
+
             else -> return false
         }
 
         selection.expand(expandDirection)
-        for(x in minX..maxX) {
-            for(y in minY..maxY) {
+        for (x in minX..maxX) {
+            for (y in minY..maxY) {
                 edge = when (face) {
                     0 -> BlockVector3.at(selection.maximumPoint.x, y, x)
                     1 -> BlockVector3.at(selection.minimumPoint.x, y, x)
@@ -151,13 +157,13 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
                     else -> return false
                 }
                 isAir = world.getBlock(edge).blockType.material.isAir
-                if(!isAir) return false
+                if (!isAir) return false
             }
         }
         selection.contract(contractDirection)
         return true
-        */
 
+         */
 
         // FASTER IMPLEMENTATION
 
@@ -169,15 +175,16 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
                 maxY = selection.maximumPoint.y
 
                 selection.expand(BlockVector3.at(1, 0, 0))
-                for(x in minX..maxX) {
-                    for(y in minY..maxY) {
+                for (x in minX..maxX) {
+                    for (y in minY..maxY) {
                         isAir = world.getBlock(BlockVector3.at(selection.maximumPoint.x, y, x)).blockType.material.isAir
-                        if(!isAir)
+                        if (!isAir)
                             return false
                     }
                 }
                 selection.contract(BlockVector3.at(-1, 0, 0))
             }
+
             1 -> {
                 minX = selection.minimumPoint.z
                 minY = selection.minimumPoint.y
@@ -185,15 +192,16 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
                 maxY = selection.maximumPoint.y
 
                 selection.expand(BlockVector3.at(-1, 0, 0))
-                for(x in minX..maxX) {
-                    for(y in minY..maxY) {
+                for (x in minX..maxX) {
+                    for (y in minY..maxY) {
                         isAir = world.getBlock(BlockVector3.at(selection.minimumPoint.x, y, x)).blockType.material.isAir
-                        if(!isAir)
+                        if (!isAir)
                             return false
                     }
                 }
                 selection.contract(BlockVector3.at(1, 0, 0))
             }
+
             2 -> {
                 minX = selection.minimumPoint.x
                 minY = selection.minimumPoint.z
@@ -201,15 +209,16 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
                 maxY = selection.maximumPoint.z
 
                 selection.expand(BlockVector3.at(0, 1, 0))
-                for(x in minX..maxX) {
-                    for(y in minY..maxY) {
+                for (x in minX..maxX) {
+                    for (y in minY..maxY) {
                         isAir = world.getBlock(BlockVector3.at(x, selection.maximumPoint.y, y)).blockType.material.isAir
-                        if(!isAir)
+                        if (!isAir)
                             return false
                     }
                 }
                 selection.contract(BlockVector3.at(0, -1, 0))
             }
+
             3 -> {
                 minX = selection.minimumPoint.x
                 minY = selection.minimumPoint.z
@@ -217,15 +226,16 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
                 maxY = selection.maximumPoint.z
 
                 selection.expand(BlockVector3.at(0, -1, 0))
-                for(x in minX..maxX) {
-                    for(y in minY..maxY) {
+                for (x in minX..maxX) {
+                    for (y in minY..maxY) {
                         isAir = world.getBlock(BlockVector3.at(x, selection.minimumPoint.y, y)).blockType.material.isAir
-                        if(!isAir)
+                        if (!isAir)
                             return false
                     }
                 }
                 selection.contract(BlockVector3.at(0, 1, 0))
             }
+
             4 -> {
                 minX = selection.minimumPoint.x
                 minY = selection.minimumPoint.y
@@ -233,15 +243,16 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
                 maxY = selection.maximumPoint.y
 
                 selection.expand(BlockVector3.at(0, 0, 1))
-                for(x in minX..maxX) {
-                    for(y in minY..maxY) {
+                for (x in minX..maxX) {
+                    for (y in minY..maxY) {
                         isAir = world.getBlock(BlockVector3.at(x, y, selection.maximumPoint.z)).blockType.material.isAir
-                        if(!isAir)
+                        if (!isAir)
                             return false
                     }
                 }
                 selection.contract(BlockVector3.at(0, 0, -1))
             }
+
             5 -> {
                 minX = selection.minimumPoint.x
                 minY = selection.minimumPoint.y
@@ -249,15 +260,16 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
                 maxY = selection.maximumPoint.y
 
                 selection.expand(BlockVector3.at(0, 0, -1))
-                for(x in minX..maxX) {
-                    for(y in minY..maxY) {
+                for (x in minX..maxX) {
+                    for (y in minY..maxY) {
                         isAir = world.getBlock(BlockVector3.at(x, y, selection.minimumPoint.z)).blockType.material.isAir
-                        if(!isAir)
+                        if (!isAir)
                             return false
                     }
                 }
                 selection.contract(BlockVector3.at(0, 0, 1))
             }
+
             else -> return false
         }
         return true
