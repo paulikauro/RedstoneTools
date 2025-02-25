@@ -14,6 +14,7 @@ import kotlin.math.min
 @Description("Container fetching command")
 @CommandPermission("redstonetools.container")
 class Container : BaseCommand() {
+
     @Default
     @CommandCompletion("@container @signal_strength")
     @Syntax("[type] [power]")
@@ -26,47 +27,76 @@ class Container : BaseCommand() {
     }
 
     private fun SignalContainer.itemWithPower(power: SignalStrength): ItemStack {
-        val slots = when (material) {
-            Material.FURNACE -> 3
-            Material.CHEST -> 27
-            Material.BARREL -> 27
-            Material.HOPPER -> 5
-            else -> 0
-        }
         val itemStack = ItemStack(material, 1)
         // ItemMeta is never null because it's only null if material is air.
         itemStack.modifyMeta<ItemMeta> {
             setDisplayName("Power ${power.originalName}")
             lore = listOf("Power ${power.originalName}")
         }
+
         return NBTItem(itemStack).apply {
             addFakeEnchant()
-            addItems(power.value, slots)
+            if (material == Material.JUKEBOX) {
+                addDisk(power.value)
+            } else {
+                val slots = when (material) {
+                    Material.FURNACE -> 3
+                    Material.CHEST -> 27
+                    Material.BARREL -> 27
+                    Material.HOPPER -> 5
+                    else -> throw RedstoneToolsException("Unknown material, this is a bug")
+                }
+                addItems(power.value, slots)
+            }
         }.item
     }
 
     private fun NBTItem.addItems(power: Int, slots: Int) {
         var itemsNeeded = itemsNeeded(power, slots)
         if (itemsNeeded == 0) return
-        addCompound("BlockEntityTag")
-        val compound = getCompound("BlockEntityTag")
-        val itemList = compound.getCompoundList("Items")
-        var slot = 0
-        while (itemsNeeded > 0) {
+        val itemList = addCompound("BlockEntityTag").getCompoundList("Items")
+        for (i in 0..(itemsNeeded / 64.toFloat()).toInt()) {
             itemList.addCompound().apply {
                 setByte("Count", min(itemsNeeded, 64).toByte())
                 setString("id", "minecraft:redstone")
-                setByte("Slot", (slot).toByte())
+                setByte("Slot", i.toByte())
             }
             itemsNeeded -= 64
-            slot++
         }
     }
 
-    private fun itemsNeeded(power: Int, available: Int): Int {
-        if (power == 0) return 0
-        if (power == 15) return available * 64
-        return ceil((32 * available * power) / 7.toFloat() - 1).toInt()
+    private fun NBTItem.addDisk(power: Int) {
+        val diskId = when (power) {
+            1 -> "minecraft:music_disc_13"
+            2 -> "minecraft:music_disc_cat"
+            3 -> "minecraft:music_disc_blocks"
+            4 -> "minecraft:music_disc_chirp"
+            5 -> "minecraft:music_disc_far"
+            6 -> "minecraft:music_disc_mall"
+            7 -> "minecraft:music_disc_mellohi"
+            8 -> "minecraft:music_disc_stal"
+            9 -> "minecraft:music_disc_strad"
+            10 -> "minecraft:music_disc_ward"
+            11 -> "minecraft:music_disc_11"
+            12 -> "minecraft:music_disc_wait"
+            13 -> "minecraft:music_disc_pigstep"
+            14 -> "minecraft:music_disc_otherside"
+            15 -> "minecraft:music_disc_5"
+            else -> return
+        }
+
+        addCompound("BlockEntityTag").apply {
+            addCompound("RecordItem").apply {
+                setString("id", diskId)
+                setByte("Count", 1)
+            }
+            setBoolean("has_record", true)
+        }
     }
 
+    private fun itemsNeeded(power: Int, slots: Int): Int {
+        if (power == 0) return 0
+        if (power == 15) return slots * 64
+        return ceil((32 * slots * power) / 7.toFloat() - 1).toInt()
+    }
 }

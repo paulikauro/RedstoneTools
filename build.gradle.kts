@@ -8,8 +8,8 @@ plugins {
     val kotlinVersion = "2.1.10"
     kotlin("jvm") version kotlinVersion
     kotlin("kapt") version kotlinVersion
-    id("com.github.johnrengelman.shadow") version "7.1.0"
-    id("net.minecrell.plugin-yml.bukkit") version "0.3.0"
+    id("com.gradleup.shadow") version "8.3.6"
+    id("de.eldoria.plugin-yml.bukkit") version "0.7.1"
 }
 
 repositories {
@@ -25,14 +25,14 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib"))
     implementation(kotlin("reflect"))
-    implementation("co.aikar:acf-paper:0.5.0-SNAPSHOT")
+    implementation("co.aikar:acf-paper:0.5.1-SNAPSHOT")
     implementation("com.google.re2j:re2j:1.6")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.0")
     implementation("net.kyori:adventure-api:4.11.0")
     implementation("net.kyori:adventure-text-serializer-gson:4.11.0")
 
-    compileOnly("de.tr7zw:item-nbt-api-plugin:2.8.0")
+    compileOnly("de.tr7zw:item-nbt-api-plugin:2.14.1")
     compileOnly("org.spigotmc:spigot-api:1.17-R0.1-SNAPSHOT")
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.2.0-SNAPSHOT")
 

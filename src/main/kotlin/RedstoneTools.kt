@@ -12,8 +12,10 @@ import com.sk89q.worldedit.util.formatting.text.TextComponent
 import com.sk89q.worldedit.util.formatting.text.event.ClickEvent
 import com.sk89q.worldedit.util.formatting.text.event.HoverEvent
 import com.sk89q.worldedit.util.formatting.text.format.TextColor
+import net.md_5.bungee.api.ChatMessageType
 import org.bukkit.ChatColor
 import org.bukkit.Material
+import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.logging.Level
 
@@ -51,10 +53,14 @@ class RedstoneTools : JavaPlugin() {
         val autowire = Autowire(server.pluginManager, liveStack, this)
         val destroy = Destroy(worldEdit)
         val pins = PinCommand(this)
+        val autoRotate = AutoRotate()
+        val cauldron = Cauldron()
         arrayOf(
             WorldEditHelper(this, worldEdit),
             SlabListener(),
             autowire,
+            autoRotate,
+            cauldron,
             destroy,
             liveStack,
             // noo
@@ -81,6 +87,8 @@ class RedstoneTools : JavaPlugin() {
                 Container(),
                 Slab(),
                 autowire,
+                autoRotate,
+                cauldron,
                 destroy,
                 liveStack,
                 pins,
@@ -88,6 +96,10 @@ class RedstoneTools : JavaPlugin() {
             ).forEach(::registerCommand)
         }
     }
+}
+
+fun Player.sendActionBar(message: String) {
+    spigot().sendMessage(ChatMessageType.ACTION_BAR, net.md_5.bungee.api.chat.TextComponent(message))
 }
 
 class RedstoneToolsException(message: String) : Exception(message)
@@ -133,6 +145,8 @@ class PinState(val value: Boolean) {
         true -> "on"
     }
 
+    fun not(): PinState = PinState(!value)
+
     companion object : Thing<PinState> {
         override val readableName = "Pin state"
 
@@ -156,7 +170,8 @@ class SignalContainer(val material: Material) {
             "furnace" to Material.FURNACE,
             "chest" to Material.CHEST,
             "barrel" to Material.BARREL,
-            "hopper" to Material.HOPPER
+            "hopper" to Material.HOPPER,
+            "jukebox" to Material.JUKEBOX,
         )
         override val values = materials.map { it.first }.sorted()
         override fun of(arg: String): SignalContainer? = materials

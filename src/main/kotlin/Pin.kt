@@ -6,7 +6,6 @@ import co.aikar.commands.CommandCompletions
 import co.aikar.commands.annotation.*
 import org.bukkit.Location
 import org.bukkit.Material
-import org.bukkit.block.data.FaceAttachable.AttachedFace
 import org.bukkit.block.data.type.Switch
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -26,12 +25,19 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
     data class Pin(val location: Location)
     private val pins = mutableMapOf<Pair<UUID, String>, Pin>()
 
-    private enum class PinStateResult { OK, DESTROYED }
+    sealed interface PinStateResult {
+        data object PinDestroyed : PinStateResult
+        data class OK(val newState: PinState) : PinStateResult
+    }
     private fun Pin.setState(
         newState: PinState,
+    ): PinStateResult = modifyState { newState }
+    private fun Pin.modifyState(
+        f: (PinState) -> PinState,
     ): PinStateResult {
         val block = location.block
-        val lever = block.blockData as? Switch ?: return PinStateResult.DESTROYED
+        val lever = block.blockData as? Switch ?: return PinStateResult.PinDestroyed
+        val newState = f(PinState(lever.isPowered))
         lever.isPowered = newState.value
         block.blockData = lever
 //        block.state.update(true, true)
@@ -42,7 +48,7 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
 //            b.state.update(true, true)
 //            b.setBlockData(b.blockData, true)
 //        }
-        return PinStateResult.OK
+        return PinStateResult.OK(newState)
     }
 
     private val blockListener = BlockListener()
@@ -119,8 +125,8 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
             return
         }
         when (pin.setState(newState)) {
-            PinStateResult.OK -> "Turned $name $newState"
-            PinStateResult.DESTROYED -> "Pin $name has been destroyed!"
+            is PinStateResult.OK -> "Turned $name $newState"
+            is PinStateResult.PinDestroyed -> "Pin $name has been destroyed!"
         }.let(player::sendMessage)
     }
 
@@ -138,21 +144,37 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
             return
         }
         when (pin.setState(state)) {
-            PinStateResult.OK -> {}
-            PinStateResult.DESTROYED -> {
+            is PinStateResult.OK -> {}
+            is PinStateResult.PinDestroyed -> {
                 player.sendMessage("Pin $name has been destroyed!")
                 return
             }
         }
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
             // todo factor out
-            when (pin.setState(PinState(!state.value))) {
-                PinStateResult.OK -> {}
-                PinStateResult.DESTROYED -> {
+            when (pin.setState(state.not())) {
+                is PinStateResult.OK -> {}
+                is PinStateResult.PinDestroyed -> {
                     player.sendMessage("Pin $name has been destroyed!")
                 }
             }
         }, time * 2L)
+    }
+
+    @Subcommand("toggle")
+    @Description("Toggle pin state")
+    @CommandPermission("redstonetools.pin.toggle")
+    @CommandCompletion("@pins")
+    fun toggle(player: Player, name: String) {
+        val pin = pins[player.uniqueId to name] ?: run {
+            player.sendMessage("No pin named $name")
+            return
+        }
+
+        when (val result = pin.modifyState(PinState::not)) {
+            is PinStateResult.OK -> "Toggled $name to ${result.newState}"
+            is PinStateResult.PinDestroyed -> "Pin $name has been destroyed!"
+        }.let(player::sendMessage)
     }
 }
 

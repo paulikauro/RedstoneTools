@@ -6,6 +6,7 @@ import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.event.platform.PlayerInputEvent
 import com.sk89q.worldedit.util.eventbus.Subscribe
 import org.bukkit.Bukkit
+import org.bukkit.ChatColor
 import org.bukkit.ChatColor.*
 import org.bukkit.entity.Player
 import org.bukkit.event.Listener
@@ -59,6 +60,16 @@ class WorldEditHelper(plugin: JavaPlugin, private val worldEdit: WorldEdit) : Li
                 else -> DARK_RED
             }
             add("   $chatColor$volume")
+            add("${DARK_GREEN}Dimensions:")
+            fun color(x: Int) = when {
+                x < 50 -> GREEN
+                x < 75 -> YELLOW
+                x < 100 -> RED
+                else -> DARK_RED
+            }
+            val line = with(selection) { arrayOf(width, height, length) }
+                .joinToString(separator = "${WHITE}x") { "${color(it)}$it" }
+            add("   $line")
         }
         player.scoreboard = Bukkit.getScoreboardManager()!!.newScoreboard.apply {
             registerNewObjective(
