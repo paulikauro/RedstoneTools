@@ -53,225 +53,43 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
         val regionSelector = session.getRegionSelector(world)
         val selection = session.getSelection(world)
 
+        fun checkFace(
+            bounds: (Region) -> Pair<BlockVector2, BlockVector2>,
+            expandDirection: BlockVector3,
+            edge: Region.(Int, Int) -> BlockVector3,
+        ): Boolean {
+            val (min, max) = bounds(selection)
+            for (x in min.x..max.x) {
+                for (y in min.z..max.z) {
+                    if (mask.test(selection.edge(x, y))) {
+                        selection.expand(expandDirection)
+                        return false
+                    }
+                }
+            }
+            return true
+        }
         var emptyFaces = 0
         var iterations = 0
+
+        fun Region.zy() = BlockVector2.at(minimumPoint.z, minimumPoint.y) to BlockVector2.at(maximumPoint.z, maximumPoint.y)
+        fun Region.xz() = BlockVector2.at(minimumPoint.x, minimumPoint.z) to BlockVector2.at(maximumPoint.x, maximumPoint.z)
+        fun Region.xy() = BlockVector2.at(minimumPoint.x, minimumPoint.y) to BlockVector2.at(maximumPoint.x, maximumPoint.y)
 
         while (emptyFaces != 6 && iterations < ITERATIONS_LIMIT) {
             iterations++
             emptyFaces = 0
 
-            if (checkFace(world, selection, 0)) emptyFaces++ // +X
-            if (checkFace(world, selection, 1)) emptyFaces++ // -X
-            if (checkFace(world, selection, 2)) emptyFaces++ // +Y
-            if (checkFace(world, selection, 3)) emptyFaces++ // -Y
-            if (checkFace(world, selection, 4)) emptyFaces++ // +Z
-            if (checkFace(world, selection, 5)) emptyFaces++ // -Z
+            if (checkFace(Region::zy, BlockVector3.UNIT_X) { x, y -> BlockVector3.at(maximumPoint.x, y, x) }) emptyFaces++
+            if (checkFace(Region::zy, BlockVector3.UNIT_MINUS_X) { x, y -> BlockVector3.at(minimumPoint.x, y, x) }) emptyFaces++
+            if (checkFace(Region::xz, BlockVector3.UNIT_Y) { x, y -> BlockVector3.at(x, maximumPoint.y, y) }) emptyFaces++
+            if (checkFace(Region::xz, BlockVector3.UNIT_MINUS_Y) { x, y -> BlockVector3.at(x, minimumPoint.y, y) }) emptyFaces++
+            if (checkFace(Region::xy, BlockVector3.UNIT_Z) { x, y -> BlockVector3.at(x, y, maximumPoint.z) }) emptyFaces++
+            if (checkFace(Region::xy, BlockVector3.UNIT_MINUS_Z) { x, y -> BlockVector3.at(x, y, minimumPoint.z) }) emptyFaces++
         }
 
         regionSelector.learnChanges()
         regionSelector.explainRegionAdjust(player, session)
     }
 
-    private fun checkFace(world: World, selection: Region, face: Int): Boolean {
-        var isAir: Boolean
-        val minX: Int
-        val minY: Int
-        val maxX: Int
-        val maxY: Int
-
-        // MORE READABLE, SLOWER IMPLEMENTATION
-        /*
-
-        val expandDirection: BlockVector3
-        val contractDirection: BlockVector3
-        var edge: BlockVector3
-
-        when (face) {
-            0 -> {
-                minX = selection.minimumPoint.z
-                minY = selection.minimumPoint.y
-                maxX = selection.maximumPoint.z
-                maxY = selection.maximumPoint.y
-                expandDirection = BlockVector3.at(1, 0, 0)
-                contractDirection = BlockVector3.at(-1, 0, 0)
-            }
-
-            1 -> {
-                minX = selection.minimumPoint.z
-                minY = selection.minimumPoint.y
-                maxX = selection.maximumPoint.z
-                maxY = selection.maximumPoint.y
-                expandDirection = BlockVector3.at(-1, 0, 0)
-                contractDirection = BlockVector3.at(1, 0, 0)
-            }
-
-            2 -> {
-                minX = selection.minimumPoint.x
-                minY = selection.minimumPoint.z
-                maxX = selection.maximumPoint.x
-                maxY = selection.maximumPoint.z
-                expandDirection = BlockVector3.at(0, 1, 0)
-                contractDirection = BlockVector3.at(0, -1, 0)
-            }
-
-            3 -> {
-                minX = selection.minimumPoint.x
-                minY = selection.minimumPoint.z
-                maxX = selection.maximumPoint.x
-                maxY = selection.maximumPoint.z
-                expandDirection = BlockVector3.at(0, -1, 0)
-                contractDirection = BlockVector3.at(0, 1, 0)
-            }
-
-            4 -> {
-                minX = selection.minimumPoint.x
-                minY = selection.minimumPoint.y
-                maxX = selection.maximumPoint.x
-                maxY = selection.maximumPoint.y
-                expandDirection = BlockVector3.at(0, 0, 1)
-                contractDirection = BlockVector3.at(0, 0, -1)
-            }
-
-            5 -> {
-                minX = selection.minimumPoint.x
-                minY = selection.minimumPoint.y
-                maxX = selection.maximumPoint.x
-                maxY = selection.maximumPoint.y
-                expandDirection = BlockVector3.at(0, 0, -1)
-                contractDirection = BlockVector3.at(0, 0, 1)
-            }
-
-            else -> return false
-        }
-
-        selection.expand(expandDirection)
-        for (x in minX..maxX) {
-            for (y in minY..maxY) {
-                edge = when (face) {
-                    0 -> BlockVector3.at(selection.maximumPoint.x, y, x)
-                    1 -> BlockVector3.at(selection.minimumPoint.x, y, x)
-                    2 -> BlockVector3.at(x, selection.maximumPoint.y, y)
-                    3 -> BlockVector3.at(x, selection.minimumPoint.y, y)
-                    4 -> BlockVector3.at(x, y, selection.maximumPoint.z)
-                    5 -> BlockVector3.at(x, y, selection.minimumPoint.z)
-                    else -> return false
-                }
-                isAir = world.getBlock(edge).blockType.material.isAir
-                if (!isAir) return false
-            }
-        }
-        selection.contract(contractDirection)
-        return true
-
-         */
-
-        // FASTER IMPLEMENTATION
-
-        when (face) {
-            0 -> {
-                minX = selection.minimumPoint.z
-                minY = selection.minimumPoint.y
-                maxX = selection.maximumPoint.z
-                maxY = selection.maximumPoint.y
-
-                selection.expand(BlockVector3.at(1, 0, 0))
-                for (x in minX..maxX) {
-                    for (y in minY..maxY) {
-                        isAir = world.getBlock(BlockVector3.at(selection.maximumPoint.x, y, x)).blockType.material.isAir
-                        if (!isAir)
-                            return false
-                    }
-                }
-                selection.contract(BlockVector3.at(-1, 0, 0))
-            }
-
-            1 -> {
-                minX = selection.minimumPoint.z
-                minY = selection.minimumPoint.y
-                maxX = selection.maximumPoint.z
-                maxY = selection.maximumPoint.y
-
-                selection.expand(BlockVector3.at(-1, 0, 0))
-                for (x in minX..maxX) {
-                    for (y in minY..maxY) {
-                        isAir = world.getBlock(BlockVector3.at(selection.minimumPoint.x, y, x)).blockType.material.isAir
-                        if (!isAir)
-                            return false
-                    }
-                }
-                selection.contract(BlockVector3.at(1, 0, 0))
-            }
-
-            2 -> {
-                minX = selection.minimumPoint.x
-                minY = selection.minimumPoint.z
-                maxX = selection.maximumPoint.x
-                maxY = selection.maximumPoint.z
-
-                selection.expand(BlockVector3.at(0, 1, 0))
-                for (x in minX..maxX) {
-                    for (y in minY..maxY) {
-                        isAir = world.getBlock(BlockVector3.at(x, selection.maximumPoint.y, y)).blockType.material.isAir
-                        if (!isAir)
-                            return false
-                    }
-                }
-                selection.contract(BlockVector3.at(0, -1, 0))
-            }
-
-            3 -> {
-                minX = selection.minimumPoint.x
-                minY = selection.minimumPoint.z
-                maxX = selection.maximumPoint.x
-                maxY = selection.maximumPoint.z
-
-                selection.expand(BlockVector3.at(0, -1, 0))
-                for (x in minX..maxX) {
-                    for (y in minY..maxY) {
-                        isAir = world.getBlock(BlockVector3.at(x, selection.minimumPoint.y, y)).blockType.material.isAir
-                        if (!isAir)
-                            return false
-                    }
-                }
-                selection.contract(BlockVector3.at(0, 1, 0))
-            }
-
-            4 -> {
-                minX = selection.minimumPoint.x
-                minY = selection.minimumPoint.y
-                maxX = selection.maximumPoint.x
-                maxY = selection.maximumPoint.y
-
-                selection.expand(BlockVector3.at(0, 0, 1))
-                for (x in minX..maxX) {
-                    for (y in minY..maxY) {
-                        isAir = world.getBlock(BlockVector3.at(x, y, selection.maximumPoint.z)).blockType.material.isAir
-                        if (!isAir)
-                            return false
-                    }
-                }
-                selection.contract(BlockVector3.at(0, 0, -1))
-            }
-
-            5 -> {
-                minX = selection.minimumPoint.x
-                minY = selection.minimumPoint.y
-                maxX = selection.maximumPoint.x
-                maxY = selection.maximumPoint.y
-
-                selection.expand(BlockVector3.at(0, 0, -1))
-                for (x in minX..maxX) {
-                    for (y in minY..maxY) {
-                        isAir = world.getBlock(BlockVector3.at(x, y, selection.minimumPoint.z)).blockType.material.isAir
-                        if (!isAir)
-                            return false
-                    }
-                }
-                selection.contract(BlockVector3.at(0, 0, 1))
-            }
-
-            else -> return false
-        }
-        return true
-    }
 }
