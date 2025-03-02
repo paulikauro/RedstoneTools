@@ -1,14 +1,16 @@
 package redstonetools
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.ConditionFailedException
 import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.bukkit.BukkitAdapter
+import com.sk89q.worldedit.function.mask.ExistingBlockMask
+import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
+import com.sk89q.worldedit.regions.CuboidRegion
 import com.sk89q.worldedit.regions.Region
+import com.sk89q.worldedit.regions.selector.CuboidRegionSelector
 import com.sk89q.worldedit.util.formatting.text.TextComponent
-import com.sk89q.worldedit.world.World
 import org.bukkit.entity.Player
 
 private const val ITERATIONS_LIMIT = 160
@@ -18,78 +20,61 @@ private const val ITERATIONS_LIMIT = 160
 @CommandPermission("redstonetools.that")
 class That(private val worldEdit: WorldEdit) : BaseCommand() {
     @Default
-    @Syntax("")
     fun that(
         player: Player,
-        args: Array<String>
     ) {
-        if (args.isNotEmpty()) {
-            throw ConditionFailedException("Too many arguments!")
+        val weplayer = BukkitAdapter.adapt(player)
+        val mask = ExistingBlockMask(weplayer.world)
+        val target = weplayer.getBlockTrace(ITERATIONS_LIMIT)?.toVector()?.toBlockPoint() ?: run {
+            weplayer.printError(TextComponent.of("No build in sight!"))
+            return
         }
 
-        val weplayer = BukkitAdapter.adapt(player)
-
-        if (selectTargetBlock(weplayer)) {
-            growSelection(weplayer)
-            weplayer.printInfo(TextComponent.of("Build selected."))
-        } else weplayer.printError(TextComponent.of("No build in sight!"))
+        val region = expandRegion(target, mask)
+        val sel = CuboidRegionSelector(weplayer.world, region.pos1, region.pos2)
+        val session = worldEdit.sessionManager.get(weplayer)
+        session.setRegionSelector(weplayer.world, sel)
+        sel.explainRegionAdjust(weplayer, session)
+        weplayer.printInfo(TextComponent.of("Build selected."))
     }
 
-    private fun selectTargetBlock(player: WEPlayer): Boolean {
-        val session = worldEdit.sessionManager.get(player)
-        val world = player.world
-        val regionSelector = session.getRegionSelector(world)
-        val targetBlock = player.getBlockTrace(ITERATIONS_LIMIT)?.toVector()?.toBlockPoint() ?: return false
-
-        regionSelector.selectPrimary(targetBlock, null)
-        regionSelector.selectSecondary(targetBlock, null)
-        regionSelector.explainRegionAdjust(player, session)
-        return true
-    }
-
-    private fun growSelection(player: WEPlayer) {
-        val session = worldEdit.sessionManager.get(player)
-        val world = player.world
-        val regionSelector = session.getRegionSelector(world)
-        val selection = session.getSelection(world)
-
-        fun checkFace(
-            bounds: (Region) -> Pair<BlockVector2, BlockVector2>,
-            expandDirection: BlockVector3,
-            edge: Region.(Int, Int) -> BlockVector3,
-        ): Boolean {
-            val (min, max) = bounds(selection)
-            for (x in min.x..max.x) {
-                for (y in min.z..max.z) {
-                    if (mask.test(selection.edge(x, y))) {
-                        selection.expand(expandDirection)
-                        return false
-                    }
+    private fun expandRegion(target: BlockVector3, mask: Mask): CuboidRegion {
+        val region = CuboidRegion(target, target)
+        // not always the case, but here pos1 = min, pos2 = max
+        fun CuboidRegion.xyMin() = CuboidRegion(pos1.withZ(pos1.z - 1), pos2.withZ(pos1.z - 1))
+        fun CuboidRegion.xyMax() = CuboidRegion(pos1.withZ(pos2.z + 1), pos2.withZ(pos2.z + 1))
+        fun CuboidRegion.xzMin() = CuboidRegion(pos1.withY(pos1.y - 1), pos2.withY(pos1.y - 1))
+        fun CuboidRegion.xzMax() = CuboidRegion(pos1.withY(pos2.y + 1), pos2.withY(pos2.y + 1))
+        fun CuboidRegion.yzMin() = CuboidRegion(pos1.withX(pos1.x - 1), pos2.withX(pos1.x - 1))
+        fun CuboidRegion.yzMax() = CuboidRegion(pos1.withX(pos2.x + 1), pos2.withX(pos2.x + 1))
+        fun Region.hasStuff() = any(mask::test)
+        val projections = arrayOf(CuboidRegion::xyMin, CuboidRegion::xyMax, CuboidRegion::xzMin, CuboidRegion::xzMax, CuboidRegion::yzMin, CuboidRegion::yzMax)
+        val directions = arrayOf(BlockVector3.UNIT_MINUS_Z, BlockVector3.UNIT_Z, BlockVector3.UNIT_MINUS_Y, BlockVector3.UNIT_Y, BlockVector3.UNIT_MINUS_X, BlockVector3.UNIT_X)
+        val shouldExpand = projections.map { it(region).hasStuff() }.toBooleanArray()
+        fun checkFace(i: Int, doExpand: (BlockVector3) -> Unit, vararg edges: Int) {
+            if (!shouldExpand[i]) return
+            val proj = projections[i]
+            val dir = directions[i]
+            for (e in edges) {
+                if (proj(projections[e](region)).hasStuff()) {
+                    shouldExpand[e] = true
                 }
             }
-            return true
+            doExpand(dir)
+            shouldExpand[i] = proj(region).hasStuff()
         }
-        var emptyFaces = 0
-        var iterations = 0
-
-        fun Region.zy() = BlockVector2.at(minimumPoint.z, minimumPoint.y) to BlockVector2.at(maximumPoint.z, maximumPoint.y)
-        fun Region.xz() = BlockVector2.at(minimumPoint.x, minimumPoint.z) to BlockVector2.at(maximumPoint.x, maximumPoint.z)
-        fun Region.xy() = BlockVector2.at(minimumPoint.x, minimumPoint.y) to BlockVector2.at(maximumPoint.x, maximumPoint.y)
-
-        while (emptyFaces != 6 && iterations < ITERATIONS_LIMIT) {
-            iterations++
-            emptyFaces = 0
-
-            if (checkFace(Region::zy, BlockVector3.UNIT_X) { x, y -> BlockVector3.at(maximumPoint.x, y, x) }) emptyFaces++
-            if (checkFace(Region::zy, BlockVector3.UNIT_MINUS_X) { x, y -> BlockVector3.at(minimumPoint.x, y, x) }) emptyFaces++
-            if (checkFace(Region::xz, BlockVector3.UNIT_Y) { x, y -> BlockVector3.at(x, maximumPoint.y, y) }) emptyFaces++
-            if (checkFace(Region::xz, BlockVector3.UNIT_MINUS_Y) { x, y -> BlockVector3.at(x, minimumPoint.y, y) }) emptyFaces++
-            if (checkFace(Region::xy, BlockVector3.UNIT_Z) { x, y -> BlockVector3.at(x, y, maximumPoint.z) }) emptyFaces++
-            if (checkFace(Region::xy, BlockVector3.UNIT_MINUS_Z) { x, y -> BlockVector3.at(x, y, minimumPoint.z) }) emptyFaces++
+        fun p1(x: BlockVector3) { region.pos1 = region.pos1.add(x) }
+        fun p2(x: BlockVector3) { region.pos2 = region.pos2.add(x) }
+        var i = 0
+        while (shouldExpand.any { it } && i < ITERATIONS_LIMIT) {
+            checkFace(0, ::p1, 2, 3, 4, 5)
+            checkFace(1, ::p2, 2, 3, 4, 5)
+            checkFace(2, ::p1, 0, 1, 4, 5)
+            checkFace(3, ::p2, 0, 1, 4, 5)
+            checkFace(4, ::p1, 0, 1, 2, 3)
+            checkFace(5, ::p2, 0, 1, 2, 3)
+            i++
         }
-
-        regionSelector.learnChanges()
-        regionSelector.explainRegionAdjust(player, session)
+        return region
     }
-
 }
