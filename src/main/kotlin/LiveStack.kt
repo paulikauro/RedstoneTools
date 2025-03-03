@@ -1,15 +1,14 @@
 package redstonetools
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.ConditionFailedException
 import co.aikar.commands.annotation.*
-import com.sk89q.worldedit.IncompleteRegionException
 import com.sk89q.worldedit.WorldEdit
-import com.sk89q.worldedit.bukkit.BukkitAdapter
+import com.sk89q.worldedit.function.mask.ExistingBlockMask
 import com.sk89q.worldedit.math.BlockVector3
+import com.sk89q.worldedit.regions.Region
+import com.sk89q.worldedit.util.formatting.text.TextComponent
 import org.bukkit.Bukkit
 import org.bukkit.block.Block
-import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockBreakEvent
@@ -30,25 +29,17 @@ class LiveStack(private val plugin: Plugin, private val worldEdit: WorldEdit) : 
     }
 
     @Default
-    fun livestack(player: Player) {
+    fun livestack(player: WEPlayer, selection: Region) {
         if (player.uniqueId in gonnaLiveStack) {
             gonnaLiveStack.remove(player.uniqueId)
             "Live Stack Disabled"
         } else {
-            val wePlayer = BukkitAdapter.adapt(player)
-            // TODO: factor this out (shared with RStack)
-            val session = worldEdit.sessionManager.get(wePlayer)
-            val selectionWorld = session.selectionWorld ?: throw ConditionFailedException("no selection world !?")
-            val selection = try {
-                // TODO: is try catch needed?
-                session.getSelection(selectionWorld)
-            } catch (e: IncompleteRegionException) {
-                throw ConditionFailedException("You do not have a selection!")
-            }
-            val blocks = selection.filter { !selectionWorld.getBlock(it).blockType.material.isAir }
+            // world is always defined when we get the selection from ACF
+            val mask = ExistingBlockMask(selection.world!!)
+            val blocks = selection.filterNot(mask::test)
             gonnaLiveStack[player.uniqueId] = State.SelectingRoot(blocks)
             "Click to select root block"
-        }.let { player.sendMessage(it) }
+        }.let { player.printInfo(TextComponent.of(it)) }
     }
 
     @EventHandler

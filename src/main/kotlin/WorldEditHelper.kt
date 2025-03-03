@@ -1,12 +1,10 @@
 package redstonetools
 
-import com.sk89q.worldedit.IncompleteRegionException
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.event.platform.PlayerInputEvent
 import com.sk89q.worldedit.util.eventbus.Subscribe
 import org.bukkit.Bukkit
-import org.bukkit.ChatColor
 import org.bukkit.ChatColor.*
 import org.bukkit.entity.Player
 import org.bukkit.event.Listener
@@ -36,9 +34,7 @@ class WorldEditHelper(plugin: JavaPlugin, private val worldEdit: WorldEdit) : Li
 
     private fun setPlayerSelection(player: Player) {
         val session = worldEdit.sessionManager.get(BukkitAdapter.adapt(player))
-        val selection = try {
-            session.getSelection(session.selectionWorld ?: throw IncompleteRegionException())
-        } catch (exception: IncompleteRegionException) {
+        val selection = session.getSelectionOrNull() ?: run {
             player.hideHelper()
             return
         }

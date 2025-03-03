@@ -20,10 +20,7 @@ import kotlin.math.abs
 typealias WEPlayer = com.sk89q.worldedit.entity.Player
 
 private val BlockVector3.isUpright: Boolean
-    get() {
-        // TODO: is this comparison ok?
-        return x == 0 && z == 0
-    }
+    get() = x == 0 && z == 0
 
 @CommandAlias("/rstack|/rs")
 @Description("Redstone stacking command")
@@ -32,7 +29,9 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
     @Default
     @Syntax("[-e] [direction] [count] [spacing]")
     fun rstack(
-        player: Player,
+        player: WEPlayer,
+        session: LocalSession,
+        selection: Region,
         args: Array<String>
     ) {
         var expand = false
@@ -64,7 +63,7 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
             spacing *= -1
         }
         try {
-            doStack(BukkitAdapter.adapt(player), count, spacing, expand, withAir, direction ?: "me")
+            doStack(player, session, selection, count, spacing, expand, withAir, direction ?: "me")
         } catch (e: UnknownDirectionException) {
             throw ConditionFailedException("Unknown direction")
         }
@@ -73,21 +72,14 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
     // throws UnknownDirectionException
     private fun doStack(
         player: WEPlayer,
+        session: LocalSession,
+        selection: Region,
         count: Int,
         spacing: Int,
         expand: Boolean,
         withAir: Boolean,
         direction: String
     ): Int {
-        val session = worldEdit.sessionManager.get(player)
-        val selection = try {
-            // TODO: null check session.selectionWorld
-            session.selectionWorld?.let { world ->
-                session.getSelection(world)
-            } ?: throw IncompleteRegionException()
-        } catch (e: IncompleteRegionException) {
-            throw ConditionFailedException("You do not have a selection!")
-        }
         val spacingVec = directionVectorFor(player, direction).multiply(spacing)
         val affected = try {
             session.createEditSession(player).use { editSession ->
@@ -156,4 +148,3 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
 }
 
 private fun <E> List<E>.getOrDefault(index: Int, default: E): E = getOrNull(index) ?: default
-

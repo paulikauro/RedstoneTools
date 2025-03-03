@@ -1,11 +1,16 @@
 package redstonetools
 
 import co.aikar.commands.*
+import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.WorldEditException
+import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
 import com.sk89q.worldedit.extension.factory.MaskFactory
+import com.sk89q.worldedit.extension.input.ParserContext
+import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
+import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.util.formatting.component.PaginationBox
 import com.sk89q.worldedit.util.formatting.text.Component
 import com.sk89q.worldedit.util.formatting.text.TextComponent
@@ -18,8 +23,6 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.logging.Level
-
-const val MAKE_SELECTION_FIRST = "Make a region selection first."
 
 class RedstoneTools : JavaPlugin() {
     private fun handleCommandException(
@@ -74,6 +77,30 @@ class RedstoneTools : JavaPlugin() {
                 "search_page" to SearchPageCompletionHandler(),
                 "pins" to pins.CompletionHandler(),
             ).forEach { (id, handler) -> commandCompletions.registerCompletion(id, handler) }
+            commandCompletions.setDefaultCompletion("we_mask", Mask::class.java)
+            commandContexts.registerContext(Mask::class.java) { context ->
+                val player = context.player?.let(BukkitAdapter::adapt)
+                val localSession = player?.let(worldEdit.sessionManager::get)
+                val parserContext = ParserContext().apply {
+                    actor = player
+                    world = player?.world
+                    session = localSession
+                    extent = localSession?.selectionWorld
+                    isRestricted = true
+                }
+                worldEdit.maskFactory.parseFromInput(context.popFirstArg(), parserContext)
+            }
+            fun BukkitCommandExecutionContext.requireWEPlayer(): com.sk89q.worldedit.entity.Player =
+                player?.let(BukkitAdapter::adapt) ?: throw ConditionFailedException("This can only be run by a player")
+            commandContexts.registerIssuerOnlyContext(com.sk89q.worldedit.entity.Player::class.java) { context ->
+                context.requireWEPlayer()
+            }
+            commandContexts.registerIssuerOnlyContext(LocalSession::class.java) { context ->
+                worldEdit.sessionManager.get(context.requireWEPlayer())
+            }
+            commandContexts.registerIssuerOnlyContext(Region::class.java) { context ->
+                worldEdit.sessionManager.get(context.requireWEPlayer()).requireSelection()
+            }
             arrayOf(
                 SignalStrength,
                 PinState,

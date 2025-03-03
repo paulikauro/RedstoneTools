@@ -5,14 +5,15 @@ import co.aikar.commands.BukkitCommandCompletionContext
 import co.aikar.commands.CommandCompletions
 import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.IncompleteRegionException
+import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.bukkit.BukkitAdapter
-import com.sk89q.worldedit.extension.factory.MaskFactory
-import com.sk89q.worldedit.extension.input.ParserContext
 import com.sk89q.worldedit.function.RegionFunction
 import com.sk89q.worldedit.function.RegionMaskingFilter
+import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.function.operation.Operations
 import com.sk89q.worldedit.function.visitor.RegionVisitor
+import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.util.formatting.component.InvalidComponentException
 import com.sk89q.worldedit.util.formatting.text.TextComponent
 import org.bukkit.entity.Player
@@ -27,60 +28,46 @@ val findResults = HashMap<UUID, MutableList<LocationContainer>>()
 @CommandPermission("redstonetools.find")
 class Find(private val worldEdit: WorldEdit) : BaseCommand() {
     @Default
-    @CommandCompletion("@we_mask")
     @Syntax("[material]")
     fun find(
-        player: Player,
-        arg: String
+        player: WEPlayer,
+        mask: Mask,
+        selection: Region,
     ) {
-        doFind(BukkitAdapter.adapt(player), arg)
+        val locations = mutableListOf<LocationContainer>()
+        val regionFunction = RegionFunction { position ->
+            locations.add(LocationContainer(position, TextComponent.of(position.toString())))
+            false
+        }
+        val regionMaskingFilter = RegionMaskingFilter(mask, regionFunction)
+        val regionVisitor = RegionVisitor(selection, regionMaskingFilter)
+        Operations.complete(regionVisitor)
+        if (locations.isNotEmpty()) {
+            findResults[player.uniqueId] = locations
+            page(player, 1)
+        } else {
+            findResults.remove(player.uniqueId)
+            player.printInfo(TextComponent.of("No results found."))
+        }
     }
 
     @Subcommand("-p")
     @CommandCompletion("@find_page")
     @Syntax("[number]")
     fun page(
-        player: Player,
+        player: WEPlayer,
         page: Int
     ) {
-        val locations = findResults[player.uniqueId] ?: throw RedstoneToolsException(MAKE_SELECTION_FIRST)
+        val locations = findResults[player.uniqueId] ?: throw RedstoneToolsException("Use //find to get results")
         val paginationBox = LocationsPaginationBox(locations, "Find Results", "//find -p %page%")
         val component = try {
             paginationBox.create(page)
         } catch (e: InvalidComponentException) {
             throw RedstoneToolsException("Invalid page number.")
         }
-        BukkitAdapter.adapt(player).print(component)
+        player.print(component)
     }
 
-    private fun doFind(player: WEPlayer, arg: String) {
-        val session = worldEdit.sessionManager.get(player)
-        val selection = try {
-            session.getSelection(session.selectionWorld)
-        } catch (e: IncompleteRegionException) {
-            throw RedstoneToolsException(MAKE_SELECTION_FIRST)
-        }
-        val locations = mutableListOf<LocationContainer>()
-        val maskFactory = MaskFactory(worldEdit)
-        val parserContext = ParserContext().apply {
-            extent = session.selectionWorld
-        }
-        val blockMask = maskFactory.parseFromInput(arg, parserContext)
-        val regionFunction = RegionFunction { position ->
-            locations.add(LocationContainer(position, TextComponent.of(position.toString())))
-            false
-        }
-        val regionMaskingFilter = RegionMaskingFilter(blockMask, regionFunction)
-        val regionVisitor = RegionVisitor(selection, regionMaskingFilter)
-        Operations.complete(regionVisitor)
-        if (locations.isNotEmpty()) {
-            findResults[player.uniqueId] = locations
-            page(BukkitAdapter.adapt(player), 1)
-        } else {
-            findResults.remove(player.uniqueId)
-            player.printInfo(TextComponent.of("No results found."))
-        }
-    }
 }
 
 class FindPageCompletionHandler :

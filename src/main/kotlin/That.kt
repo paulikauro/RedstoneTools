@@ -3,15 +3,12 @@ package redstonetools
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.WorldEdit
-import com.sk89q.worldedit.bukkit.BukkitAdapter
-import com.sk89q.worldedit.function.mask.ExistingBlockMask
 import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.CuboidRegion
 import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.regions.selector.CuboidRegionSelector
 import com.sk89q.worldedit.util.formatting.text.TextComponent
-import org.bukkit.entity.Player
 
 private const val ITERATIONS_LIMIT = 160
 
@@ -21,21 +18,21 @@ private const val ITERATIONS_LIMIT = 160
 class That(private val worldEdit: WorldEdit) : BaseCommand() {
     @Default
     fun that(
-        player: Player,
+        player: WEPlayer,
+        @Default("#existing")
+        mask: Mask,
     ) {
-        val weplayer = BukkitAdapter.adapt(player)
-        val mask = ExistingBlockMask(weplayer.world)
-        val target = weplayer.getBlockTrace(ITERATIONS_LIMIT)?.toVector()?.toBlockPoint() ?: run {
-            weplayer.printError(TextComponent.of("No build in sight!"))
+        val target = player.getBlockTrace(ITERATIONS_LIMIT)?.toVector()?.toBlockPoint() ?: run {
+            player.printError(TextComponent.of("No build in sight!"))
             return
         }
 
         val region = expandRegion(target, mask)
-        val sel = CuboidRegionSelector(weplayer.world, region.pos1, region.pos2)
-        val session = worldEdit.sessionManager.get(weplayer)
-        session.setRegionSelector(weplayer.world, sel)
-        sel.explainRegionAdjust(weplayer, session)
-        weplayer.printInfo(TextComponent.of("Build selected."))
+        val sel = CuboidRegionSelector(player.world, region.pos1, region.pos2)
+        val session = worldEdit.sessionManager.get(player)
+        session.setRegionSelector(player.world, sel)
+        sel.explainRegionAdjust(player, session)
+        player.printInfo(TextComponent.of("Build selected."))
     }
 
     private fun expandRegion(target: BlockVector3, mask: Mask): CuboidRegion {

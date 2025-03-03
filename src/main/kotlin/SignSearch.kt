@@ -5,7 +5,6 @@ import co.aikar.commands.BukkitCommandCompletionContext
 import co.aikar.commands.CommandCompletions
 import co.aikar.commands.annotation.*
 import com.sk89q.jnbt.StringTag
-import com.sk89q.worldedit.IncompleteRegionException
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.function.RegionFunction
@@ -23,6 +22,8 @@ import com.google.re2j.Pattern
 import com.google.re2j.PatternSyntaxException
 import com.sk89q.jnbt.CompoundTag
 import com.sk89q.jnbt.ListTag
+import com.sk89q.worldedit.LocalSession
+import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.util.formatting.component.InvalidComponentException
 import com.sk89q.worldedit.util.formatting.text.TextComponent
 import com.sk89q.worldedit.util.formatting.text.format.TextColor
@@ -38,40 +39,15 @@ class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
     @Default
     @Syntax("[expression]")
     fun search(
-        player: Player,
+        player: WEPlayer,
+        session: LocalSession,
+        selection: Region,
         arg: String
     ) {
-        doSearch(BukkitAdapter.adapt(player), arg)
-    }
-
-    @Subcommand("-p")
-    @CommandCompletion("@search_page")
-    @Syntax("[number]")
-    fun page(
-        player: Player,
-        page: Int
-    ) {
-        val results = searchResults[player.uniqueId] ?: throw RedstoneToolsException(MAKE_SELECTION_FIRST)
-        val paginationBox = LocationsPaginationBox(results, "Search Results", "//signsearch -p %page%")
-        val component = try {
-            paginationBox.create(page)
-        } catch (e: InvalidComponentException) {
-            throw RedstoneToolsException("Invalid page number.")
-        }
-        BukkitAdapter.adapt(player).print(component)
-    }
-
-    private fun doSearch(player: WEPlayer, arg: String) {
         val pattern = try {
             Pattern.compile(arg)
         } catch (e: PatternSyntaxException) {
             throw RedstoneToolsException("Illegal pattern: " + e.message)
-        }
-        val session = worldEdit.sessionManager.get(player)
-        val selection = try {
-            session.getSelection(session.selectionWorld)
-        } catch (e: IncompleteRegionException) {
-            throw RedstoneToolsException(MAKE_SELECTION_FIRST)
         }
         val matches = mutableListOf<LocationContainer>()
         val blockMask = BlockCategoryMask(session.selectionWorld, BlockCategories.SIGNS)
@@ -95,6 +71,23 @@ class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
         }
     }
 
+    @Subcommand("-p")
+    @CommandCompletion("@search_page")
+    @Syntax("[number]")
+    fun page(
+        player: Player,
+        page: Int
+    ) {
+        val results = searchResults[player.uniqueId] ?: throw RedstoneToolsException("Use //signsearch to get results")
+        val paginationBox = LocationsPaginationBox(results, "Search Results", "//signsearch -p %page%")
+        val component = try {
+            paginationBox.create(page)
+        } catch (e: InvalidComponentException) {
+            throw RedstoneToolsException("Invalid page number.")
+        }
+        BukkitAdapter.adapt(player).print(component)
+    }
+
     private fun parseMatch(baseBlock: BaseBlock, pattern: Pattern): TextComponent? {
         val compoundTag = baseBlock.nbtData ?: return null
         val front = (compoundTag.value["front_text"] as CompoundTag).value["messages"] as ListTag
@@ -107,13 +100,14 @@ class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
         }
 
         return lines
-            .mapIndexedNotNull { index, line -> line
-                .findFirstMatch(pattern)
-                ?.let {
-                    TextComponent.of("Line ${index + 1}: ")
-                        .color(TextColor.GRAY)
-                        .append(line.withHighlightedReplacement(it.text))
-                }
+            .mapIndexedNotNull { index, line ->
+                line
+                    .findFirstMatch(pattern)
+                    ?.let {
+                        TextComponent.of("Line ${index + 1}: ")
+                            .color(TextColor.GRAY)
+                            .append(line.withHighlightedReplacement(it.text))
+                    }
             }
             .ifEmpty { null }
             ?.let { matchComponents -> TextComponent.join(TextComponent.newline(), matchComponents) }
