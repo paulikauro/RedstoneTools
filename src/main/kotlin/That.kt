@@ -27,7 +27,10 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
             return
         }
 
-        val region = expandRegion(target, mask)
+        val (region, iters) = expandRegion(target, mask)
+        if (iters == ITERATIONS_LIMIT) {
+            player.printError(TextComponent.of("Reached iteration limit while selecting. Your selection may be too small or too big."))
+        }
         val sel = CuboidRegionSelector(player.world, region.pos1, region.pos2)
         val session = worldEdit.sessionManager.get(player)
         session.setRegionSelector(player.world, sel)
@@ -35,7 +38,7 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
         player.printInfo(TextComponent.of("Build selected."))
     }
 
-    private fun expandRegion(target: BlockVector3, mask: Mask): CuboidRegion {
+    private fun expandRegion(target: BlockVector3, mask: Mask): Pair<CuboidRegion, Int> {
         val region = CuboidRegion(target, target)
         // not always the case, but here pos1 = min, pos2 = max
         fun CuboidRegion.xyMin() = CuboidRegion(pos1.withZ(pos1.z - 1), pos2.withZ(pos1.z - 1))
@@ -72,6 +75,6 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
             checkFace(5, ::p2, 0, 1, 2, 3)
             i++
         }
-        return region
+        return region to i
     }
 }
