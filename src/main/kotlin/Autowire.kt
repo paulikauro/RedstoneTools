@@ -48,7 +48,7 @@ class Autowire(
         autos.remove(event.player.uniqueId)
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     fun onAutoWireEvent(event: BlockPlaceEvent) {
         with(event) {
             arrayOf(

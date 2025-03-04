@@ -37,7 +37,7 @@ class AutoRotate : BaseCommand(), Listener {
         enabledPlayers.remove(event.player.uniqueId)
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     fun onBlockPlace(event: BlockPlaceEvent) {
         val player = event.player
         if (player.uniqueId !in enabledPlayers) return

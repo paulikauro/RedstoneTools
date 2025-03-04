@@ -7,6 +7,7 @@ import org.bukkit.Sound
 import org.bukkit.block.Block
 import org.bukkit.block.data.Levelled
 import org.bukkit.entity.Player
+import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
@@ -40,6 +41,7 @@ class Cauldron : BaseCommand(), Listener {
 
     @EventHandler
     fun onCauldronInteract(event: PlayerInteractEvent) {
+        if (event.useInteractedBlock() == Event.Result.DENY) return
         val player = event.player
         if (player.uniqueId !in enabledPlayers) return
         if (event.hand != EquipmentSlot.HAND) return
