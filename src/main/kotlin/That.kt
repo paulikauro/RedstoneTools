@@ -208,47 +208,39 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
         val components = UnionFind()
         val rootCompo = components.new()
         val shouldExpand = BooleanArray(6)
-        val compoFrontiers = Array(6) { BlockMap.create<Int>() }
+        val compos = BlockMap.create<Int>()
+        compos[target] = rootCompo
         directions.forEachIndexed { i, d ->
             val v = target.add(d)
             val b = mask.test(v)
             shouldExpand[i] = b
-            if (b) compoFrontiers[i][v] = rootCompo
+            if (b) compos[v] = rootCompo
         }
-//        val shouldExpand = projections.map { it(region).hasStuff() }.toBooleanArray()
-//        val compoFrontiers = Array(6) { BlockMap.create<Int>().apply { put(target, rootCompo) } }
-        fun Region.process(face: Int): Pair<BlockMap<Int>, Boolean> {
+        fun Region.process(): Boolean {
             var b = false
-            val frontier = compoFrontiers[face]
-            val newFrontier = BlockMap.create<Int>()
             for (v in this) {
                 if (!mask.test(v)) continue
                 // connectedness
                 val asdf = directions.mapNotNull {
-                    val vv = v.add(it)
-                    frontier[vv] ?: newFrontier[vv]
+                    compos[v.add(it)]
                 }
                 val compo = if (asdf.isEmpty()) components.new() else asdf.reduce(components::union)
-                newFrontier[v] = compo
-                if (compo == rootCompo) b = true
+                compos[v] = compo
+                if (compo == components.find(rootCompo)) b = true
             }
-            return newFrontier to b
+            return b
         }
         fun checkFace(i: Int, doExpand: (BlockVector3) -> Unit, vararg edges: Int) {
             if (!shouldExpand[i]) return
             val proj = projections[i]
             val dir = directions[i]
             for (e in edges) {
-                val (f, b) = proj(projections[e](region)).process(e)
-                if (b) {
+                if (proj(projections[e](region)).process()) {
                     shouldExpand[e] = true
                 }
-                compoFrontiers[e].putAll(f)
             }
             doExpand(dir)
-            val (f, b) = proj(region).process(i)
-            compoFrontiers[i] = f
-            shouldExpand[i] = b
+            shouldExpand[i] = proj(region).process()
         }
         fun p1(x: BlockVector3) { region.pos1 = region.pos1.add(x) }
         fun p2(x: BlockVector3) { region.pos2 = region.pos2.add(x) }
@@ -305,7 +297,7 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
     }
 }
 
-private const val path_compress = true
+private const val path_compress = false
 
 class UnionFind {
     private val parent = arrayListOf<Int>()
