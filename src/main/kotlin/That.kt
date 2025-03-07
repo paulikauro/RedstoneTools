@@ -6,20 +6,22 @@ import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.CuboidRegion
-import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.regions.selector.CuboidRegionSelector
 import com.sk89q.worldedit.util.formatting.text.TextComponent
+import org.bukkit.Bukkit
+import org.bukkit.plugin.Plugin
+import java.lang.System.nanoTime
 import java.util.BitSet
 import java.util.HashMap
-import kotlin.system.measureTimeMillis
-import kotlin.time.measureTimedValue
+import java.util.concurrent.CompletableFuture
 
 private const val ITERATIONS_LIMIT = 160
+private const val SIZE_LIMIT = 200
 
 @CommandAlias("/that|/hsel")
 @Description("Select the build you're looking at")
 @CommandPermission("redstonetools.that")
-class That(private val worldEdit: WorldEdit) : BaseCommand() {
+class That(private val worldEdit: WorldEdit, private val plugin: Plugin) : BaseCommand() {
     @Default
     fun that(
         player: WEPlayer,
@@ -32,30 +34,25 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
             return
         }
 
-        measureTimeMillis {
-            expandRegionOld(target, mask)
-        }.let { player.printInfo(TextComponent.of("old: $it ms")) }
-        val (region, iters) = measureTimedValue {  expandRegionManual(target, mask) }.let {
-            player.printInfo(TextComponent.of("manual: ${it.duration.inWholeMilliseconds} ms"))
-            it.value
+        expandRegion(target, mask).thenAccept { (region, result) ->
+            when (result) {
+                is ExpandResult.Done -> {
+                    val sel = CuboidRegionSelector(player.world, region.pos1, region.pos2)
+                    val session = worldEdit.sessionManager.get(player)
+                    session.setRegionSelector(player.world, sel)
+                    sel.explainRegionAdjust(player, session)
+                    player.printInfo(TextComponent.of("Build selected."))
+                }
+                is ExpandResult.LimitReached ->
+                    player.printError(TextComponent.of("WARNING: ${result.kind} limit reached, check your selection!"))
+            }
         }
-        if (iters == ITERATIONS_LIMIT) {
-            player.printError(TextComponent.of("Reached iteration limit while selecting. Your selection may be too small or too big."))
-        }
-        val sel = CuboidRegionSelector(player.world, region.pos1, region.pos2)
-        val session = worldEdit.sessionManager.get(player)
-        session.setRegionSelector(player.world, sel)
-        sel.explainRegionAdjust(player, session)
-        player.printInfo(TextComponent.of("Build selected."))
     }
-
-    private fun expandRegionManual(target: BlockVector3, mask: Mask): Pair<CuboidRegion, Int> {
-        var min = target
-        var max = target
-        val visited = BlockSet()
-        val queue = ArrayDeque<BlockVector3>()
-        queue.add(target)
-        visited.add(target)
+    sealed interface ExpandResult {
+        data class LimitReached(val kind: String) : ExpandResult
+        data object Done : ExpandResult
+    }
+    private fun expandRegion(target: BlockVector3, mask: Mask): CompletableFuture<Pair<CuboidRegion, ExpandResult>> {
         val offsets = arrayOf(
             BlockVector3.UNIT_X,
             BlockVector3.UNIT_Y,
@@ -64,70 +61,55 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
             BlockVector3.UNIT_MINUS_Y,
             BlockVector3.UNIT_MINUS_Z,
         )
-        while (queue.isNotEmpty() && visited.size < ITERATIONS_LIMIT * ITERATIONS_LIMIT * ITERATIONS_LIMIT) {
-            val pos = queue.removeFirst()
-            min = min.getMinimum(pos)
-            max = max.getMaximum(pos)
-            for (it in offsets) {
-                val newPos = pos.add(it)
-                if (newPos in visited) continue
-                visited.add(newPos)
-                if (mask.test(newPos)) {
-                    queue.addLast(newPos)
+        var min = target
+        var max = target
+        val visited = BlockSet()
+        val queue = ArrayDeque<BlockVector3>()
+        queue.add(target)
+        visited.add(target)
+        fun doWork(iterations: Int) {
+            var i = 0
+            while (queue.isNotEmpty() && i < iterations) {
+                i++
+                val pos = queue.removeFirst()
+                min = min.getMinimum(pos)
+                max = max.getMaximum(pos)
+                for (it in offsets) {
+                    val newPos = pos.add(it)
+                    if (newPos in visited) continue
+                    visited.add(newPos)
+                    if (mask.test(newPos)) {
+                        queue.addLast(newPos)
+                    }
                 }
             }
         }
-        return CuboidRegion(min, max) to 0
-    }
-
-    companion object {
-        private const val PX = 0
-        private const val MX = 1
-        private const val PY = 2
-        private const val MY = 3
-        private const val PZ = 4
-        private const val MZ = 5
-    }
-
-    private fun expandRegionOld(target: BlockVector3, mask: Mask): Pair<CuboidRegion, Int> {
-        val region = CuboidRegion(target, target)
-        // not always the case, but here pos1 = min, pos2 = max
-        fun CuboidRegion.xyMin() = CuboidRegion(pos1.withZ(pos1.z - 1), pos2.withZ(pos1.z - 1))
-        fun CuboidRegion.xyMax() = CuboidRegion(pos1.withZ(pos2.z + 1), pos2.withZ(pos2.z + 1))
-        fun CuboidRegion.xzMin() = CuboidRegion(pos1.withY(pos1.y - 1), pos2.withY(pos1.y - 1))
-        fun CuboidRegion.xzMax() = CuboidRegion(pos1.withY(pos2.y + 1), pos2.withY(pos2.y + 1))
-        fun CuboidRegion.yzMin() = CuboidRegion(pos1.withX(pos1.x - 1), pos2.withX(pos1.x - 1))
-        fun CuboidRegion.yzMax() = CuboidRegion(pos1.withX(pos2.x + 1), pos2.withX(pos2.x + 1))
-        fun Region.hasStuff() = any(mask::test)
-        val projections = arrayOf(CuboidRegion::xyMin, CuboidRegion::xyMax, CuboidRegion::xzMin, CuboidRegion::xzMax, CuboidRegion::yzMin, CuboidRegion::yzMax)
-        val directions = arrayOf(BlockVector3.UNIT_MINUS_Z, BlockVector3.UNIT_Z, BlockVector3.UNIT_MINUS_Y, BlockVector3.UNIT_Y, BlockVector3.UNIT_MINUS_X, BlockVector3.UNIT_X)
-        val shouldExpand = projections.map { it(region).hasStuff() }.toBooleanArray()
-        fun checkFace(i: Int, doExpand: (BlockVector3) -> Unit, vararg edges: Int) {
-            if (!shouldExpand[i]) return
-            val proj = projections[i]
-            val dir = directions[i]
-            for (e in edges) {
-                if (proj(projections[e](region)).hasStuff()) {
-                    shouldExpand[e] = true
+        val future = CompletableFuture<Pair<CuboidRegion, ExpandResult>>()
+        var nextIters = 0
+        fun next() {
+            nextIters++
+            val startNs = nanoTime()
+            // TODO extract config options
+            var sizeLimitReached = false
+            while (nanoTime() - startNs < 30_000_000 && !sizeLimitReached && queue.isNotEmpty()) {
+                doWork(1000)
+                sizeLimitReached = max.subtract(min).run { x >= SIZE_LIMIT || y >= SIZE_LIMIT || z >= SIZE_LIMIT }
+            }
+            val res = when {
+                queue.isEmpty() ->  ExpandResult.Done
+                sizeLimitReached -> ExpandResult.LimitReached("size")
+                nextIters >= 5 -> ExpandResult.LimitReached("time")
+                else -> {
+                    Bukkit.getScheduler().runTaskLater(plugin, ::next, 1)
+                    return
                 }
             }
-            doExpand(dir)
-            shouldExpand[i] = proj(region).hasStuff()
+            future.complete(CuboidRegion(min, max) to res)
         }
-        fun p1(x: BlockVector3) { region.pos1 = region.pos1.add(x) }
-        fun p2(x: BlockVector3) { region.pos2 = region.pos2.add(x) }
-        var i = 0
-        while (shouldExpand.any { it } && i < ITERATIONS_LIMIT) {
-            checkFace(0, ::p1, 2, 3, 4, 5)
-            checkFace(1, ::p2, 2, 3, 4, 5)
-            checkFace(2, ::p1, 0, 1, 4, 5)
-            checkFace(3, ::p2, 0, 1, 4, 5)
-            checkFace(4, ::p1, 0, 1, 2, 3)
-            checkFace(5, ::p2, 0, 1, 2, 3)
-            i++
-        }
-        return region to i
+        next()
+        return future
     }
+
 }
 
 private const val X_BITS = 4
@@ -137,7 +119,6 @@ private const val CHUNK_SIZE = 1 shl (X_BITS + Y_BITS + Z_BITS)
 
 class BlockSet {
     private val map = HashMap<Long, BitSet>()
-    private var _size = 0
     private fun bitSet(v: BlockVector3): BitSet {
         val yRestBits = 9 - Y_BITS
         val x = (v.x ushr X_BITS).toLong() shl (32 - Z_BITS + yRestBits)
@@ -153,10 +134,7 @@ class BlockSet {
         return x or y or z
     }
     fun add(v: BlockVector3) {
-        // I know this is incorrect
-        _size++
         bitSet(v).set(bit(v))
     }
-    val size: Int get() = _size
     operator fun contains(v: BlockVector3): Boolean = bitSet(v).get(bit(v))
 }

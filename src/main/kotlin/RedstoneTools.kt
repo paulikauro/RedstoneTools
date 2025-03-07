@@ -110,7 +110,7 @@ class RedstoneTools : JavaPlugin() {
             arrayOf(
                 RStack(worldEdit),
                 Find(worldEdit),
-                That(worldEdit),
+                That(worldEdit, this@RedstoneTools),
                 SignSearch(worldEdit),
                 Container(),
                 Slab(),
