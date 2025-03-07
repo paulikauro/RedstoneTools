@@ -85,7 +85,7 @@ class RedstoneTools : JavaPlugin() {
                     actor = player
                     world = player?.world
                     session = localSession
-                    extent = localSession?.selectionWorld
+                    extent = player?.world
                     isRestricted = true
                 }
                 worldEdit.maskFactory.parseFromInput(context.popFirstArg(), parserContext)
