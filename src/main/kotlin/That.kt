@@ -10,6 +10,9 @@ import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.regions.selector.CuboidRegionSelector
 import com.sk89q.worldedit.util.collection.BlockMap
 import com.sk89q.worldedit.util.formatting.text.TextComponent
+import java.util.AbstractSet
+import java.util.BitSet
+import java.util.HashMap
 import kotlin.system.measureTimeMillis
 import kotlin.time.measureTimedValue
 
@@ -34,11 +37,8 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
         measureTimeMillis {
             expandRegionOld(target, mask)
         }.let { player.printInfo(TextComponent.of("old: $it ms")) }
-        measureTimeMillis {
-            expandRegionManual(target, mask)
-        }.let { player.printInfo(TextComponent.of("manual: $it ms")) }
-        val (region, iters) = measureTimedValue {  expandRegionNew(target, mask) }.let {
-            player.printInfo(TextComponent.of("new: ${it.duration.inWholeMilliseconds} ms"))
+        val (region, iters) = measureTimedValue {  expandRegionManual(target, mask) }.let {
+            player.printInfo(TextComponent.of("manual: ${it.duration.inWholeMilliseconds} ms"))
             it.value
         }
         if (iters == ITERATIONS_LIMIT) {
@@ -54,10 +54,10 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
     private fun expandRegionManual(target: BlockVector3, mask: Mask): Pair<CuboidRegion, Int> {
         var min = target
         var max = target
-        val visited = BlockMap.create<Unit>()
+        val visited = BlockSet()
         val queue = ArrayDeque<BlockVector3>()
         queue.add(target)
-        visited[target] = Unit
+        visited.add(target)
         val offsets = arrayOf(
             BlockVector3.UNIT_X,
             BlockVector3.UNIT_Y,
@@ -73,7 +73,7 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
             for (it in offsets) {
                 val newPos = pos.add(it)
                 if (newPos in visited) continue
-                visited[newPos] = Unit
+                visited.add(newPos)
                 if (mask.test(newPos)) {
                     queue.addLast(newPos)
                 }
@@ -90,172 +90,7 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
         private const val PZ = 4
         private const val MZ = 5
     }
-    private fun expandRegionNewBlah(target: BlockVector3, mask: Mask): Pair<CuboidRegion, Int> {
-        var min = target
-        var max = target
-        // projections: p plus, m minus
-        fun px(i: Int, j: Int) = BlockVector3.at(max.x, i, j)
-        fun mx(i: Int, j: Int) = BlockVector3.at(min.x, i, j)
-        fun py(i: Int, j: Int) = BlockVector3.at(i, max.y, j)
-        fun my(i: Int, j: Int) = BlockVector3.at(i, min.y, j)
-        fun pz(i: Int, j: Int) = BlockVector3.at(i, j, max.z)
-        fun mz(i: Int, j: Int) = BlockVector3.at(i, j, min.z)
-        // bounds
-        fun ibx() = min.y to max.y
-        fun jbx() = min.z to max.z
-        fun iby() = min.x to max.x
-        fun jby() = min.z to max.z
-        fun ibz() = min.x to max.x
-        fun jbz() = min.y to max.y
-        // some invariants
-        // - every block inside the region has a component assigned to it
-        val components = UnionFind()
-        val rootCompo = components.new()
-        val initialCompoMap = mapOf(target to rootCompo)
-        val compoFrontiers = Array(6) { initialCompoMap }
-        val projections = arrayOf(::px, ::mx, ::py, ::my, ::pz, ::mz)
-        val iBounds = arrayOf(::ibx, ::ibx, ::iby, ::iby, ::ibz, ::ibz)
-        val jBounds = arrayOf(::jbx, ::jbx, ::jby, ::jby, ::jbz, ::jbz)
-        val directions = arrayOf(BlockVector3.UNIT_X, BlockVector3.UNIT_MINUS_X, BlockVector3.UNIT_Y, BlockVector3.UNIT_MINUS_Y, BlockVector3.UNIT_Z, BlockVector3.UNIT_MINUS_Z)
-        val shouldExpand = directions.map { mask.test(target.add(it)) }.toBooleanArray()
-        // IDK
-        fun maybeMerge(a: Int?, b: Int?) = a?.let { _ -> b?.let { components.union(a, b) } }
-        fun compoMerge(a: Int?, b: Int?, c: Int?) = maybeMerge(a, b)?.let { maybeMerge(it, c) } ?: components.new()
-        fun process2(face: Int, edge: Int) {
-            // face is what we're expanding, edge is what we're updating here
-            val newFrontier = BlockMap.create<Int>()
-            var b = false
-//            for (v in this) {
-//                if (!mask.test(v)) continue
-//                // look backwards (and otherwards) to see existing component, merge if necessary, otherwise new compo
-//                val faceCompo = compoFrontiers[face][v]
-//                val otherCompo = compoFrontiers[edge][v]
-//                val compo = when {
-//                    faceCompo == null && otherCompo == null -> components.new()
-//                    faceCompo != null && otherCompo == null -> faceCompo
-//                    faceCompo == null && otherCompo != null -> otherCompo
-//                    faceCompo != null && otherCompo != null -> components.union(faceCompo, otherCompo)
-//                    else -> throw Exception("BUG: Impossible!")
-//                }
-//                newFrontier[v] = compo
-//                if (compo == rootCompo) b = true
-//            }
-            compoFrontiers[face] = newFrontier
-            shouldExpand[face] = b
-        }
-        fun process1(face: Int) {
-            // reminder: this runs *after* expanding the face
-            val newFrontier = BlockMap.create<Int>()
-            val frontier = compoFrontiers[face]
-            val proj = projections[face]
-            val dir = directions[face]
-            val (imin, imax) = iBounds[face]()
-            val (jmin, jmax) = jBounds[face]()
-            var b = false
-            for (i in imin..imax) {
-                for (j in jmin..jmax) {
-                    val oldPos = proj(i, j)
-                    val newPos = oldPos.add(dir)
-                    if (!mask.test(newPos)) continue
-                    val backCompo = frontier[oldPos]
-                    val side1Compo = frontier[proj(i - 1, j).add(dir)]
-                    val side2Compo = frontier[proj(i, j - 1).add(dir)]
-                    val thisCompo = compoMerge(backCompo, side1Compo, side2Compo)
-                    newFrontier[newPos] = thisCompo
-                    // connected, should expand
-                    if (thisCompo == rootCompo) b = true
-                }
-            }
-            shouldExpand[face] = b
-        }
-        fun checkFace(face: Int, doExpand: (BlockVector3) -> Unit, vararg edges: Int) {
-            if (!shouldExpand[face]) return
-            val proj = projections[face]
-            val dir = directions[face]
-            for (e in edges) {
-                process2(face, e)
-            }
-            doExpand(dir)
-            process1(face)
-        }
-        // update minus/plus (min/max)
-        fun up(x: BlockVector3) { max = max.add(x) }
-        fun um(x: BlockVector3) { min = min.add(x) }
-        var i = 0
-        while (shouldExpand.any { it } && i < ITERATIONS_LIMIT) {
-            checkFace(PX, ::up, PY, MY, PZ, MZ)
-            checkFace(MX, ::um, PY, MY, PZ, MZ)
-            checkFace(PY, ::up, PX, MX, PZ, MZ)
-            checkFace(MY, ::um, PX, MX, PZ, MZ)
-            checkFace(PZ, ::up, PX, MX, PY, MY)
-            checkFace(MZ, ::um, PX, MX, PY, MY)
-            i++
-        }
-        return CuboidRegion(min, max) to i
-    }
 
-    private fun expandRegionNew(target: BlockVector3, mask: Mask): Pair<CuboidRegion, Int> {
-        val region = CuboidRegion(target, target)
-        // not always the case, but here pos1 = min, pos2 = max
-        fun CuboidRegion.xyMin() = CuboidRegion(pos1.withZ(pos1.z - 1), pos2.withZ(pos1.z - 1))
-        fun CuboidRegion.xyMax() = CuboidRegion(pos1.withZ(pos2.z + 1), pos2.withZ(pos2.z + 1))
-        fun CuboidRegion.xzMin() = CuboidRegion(pos1.withY(pos1.y - 1), pos2.withY(pos1.y - 1))
-        fun CuboidRegion.xzMax() = CuboidRegion(pos1.withY(pos2.y + 1), pos2.withY(pos2.y + 1))
-        fun CuboidRegion.yzMin() = CuboidRegion(pos1.withX(pos1.x - 1), pos2.withX(pos1.x - 1))
-        fun CuboidRegion.yzMax() = CuboidRegion(pos1.withX(pos2.x + 1), pos2.withX(pos2.x + 1))
-        val projections = arrayOf(CuboidRegion::xyMin, CuboidRegion::xyMax, CuboidRegion::xzMin, CuboidRegion::xzMax, CuboidRegion::yzMin, CuboidRegion::yzMax)
-        val directions = arrayOf(BlockVector3.UNIT_MINUS_Z, BlockVector3.UNIT_Z, BlockVector3.UNIT_MINUS_Y, BlockVector3.UNIT_Y, BlockVector3.UNIT_MINUS_X, BlockVector3.UNIT_X)
-        val components = UnionFind()
-        val rootCompo = components.new()
-        val shouldExpand = BooleanArray(6)
-        val compos = BlockMap.create<Int>()
-        compos[target] = rootCompo
-        directions.forEachIndexed { i, d ->
-            val v = target.add(d)
-            val b = mask.test(v)
-            shouldExpand[i] = b
-            if (b) compos[v] = rootCompo
-        }
-        fun Region.process(): Boolean {
-            var b = false
-            for (v in this) {
-                if (!mask.test(v)) continue
-                // connectedness
-                val asdf = directions.mapNotNull {
-                    compos[v.add(it)]
-                }
-                val compo = if (asdf.isEmpty()) components.new() else asdf.reduce(components::union)
-                compos[v] = compo
-                if (compo == components.find(rootCompo)) b = true
-            }
-            return b
-        }
-        fun checkFace(i: Int, doExpand: (BlockVector3) -> Unit, vararg edges: Int) {
-            if (!shouldExpand[i]) return
-            val proj = projections[i]
-            val dir = directions[i]
-            for (e in edges) {
-                if (proj(projections[e](region)).process()) {
-                    shouldExpand[e] = true
-                }
-            }
-            doExpand(dir)
-            shouldExpand[i] = proj(region).process()
-        }
-        fun p1(x: BlockVector3) { region.pos1 = region.pos1.add(x) }
-        fun p2(x: BlockVector3) { region.pos2 = region.pos2.add(x) }
-        var i = 0
-        while (shouldExpand.any { it } && i < ITERATIONS_LIMIT) {
-            checkFace(0, ::p1, 2, 3, 4, 5)
-            checkFace(1, ::p2, 2, 3, 4, 5)
-            checkFace(2, ::p1, 0, 1, 4, 5)
-            checkFace(3, ::p2, 0, 1, 4, 5)
-            checkFace(4, ::p1, 0, 1, 2, 3)
-            checkFace(5, ::p2, 0, 1, 2, 3)
-            i++
-        }
-        return region to i
-    }
     private fun expandRegionOld(target: BlockVector3, mask: Mask): Pair<CuboidRegion, Int> {
         val region = CuboidRegion(target, target)
         // not always the case, but here pos1 = min, pos2 = max
@@ -297,45 +132,30 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
     }
 }
 
-private const val path_compress = false
+// 9 bit address, 64 bytes
+private const val CHUNK_SIZE = 512
 
-class UnionFind {
-    private val parent = arrayListOf<Int>()
-    private val size = arrayListOf<Int>()
-    fun new(): Int {
-        val x = parent.size
-        parent.add(x)
-        size.add(1)
-        return x
+class BlockSet {
+    private val map = HashMap<Long, BitSet>()
+    private var _size = 0
+    private fun bitSet(v: BlockVector3): BitSet {
+        val x = (v.x ushr 3).toLong() shl 35
+        val z = (v.z ushr 3).toLong() shl 6
+        val y = (v.y ushr 3).toLong() and 0b00_111_111
+        val key = x or z or y
+        return map.getOrPut(key) { BitSet(CHUNK_SIZE) }
     }
-    fun union(a: Int, b: Int): Int {
-        var ar = find(a)
-        var br = find(b)
-        if (size[ar] > size[br]) {
-            val tmp = ar
-            ar = br
-            br = tmp
-        }
-        // size[ar] <= size[br]
-        size[br] += size[ar]
-        parent[ar] = br
-        return br
+    private fun bit(v: BlockVector3): Int {
+        val x = (v.x and 0b0111)
+        val y = (v.y and 0b0111) shl 3
+        val z = (v.z and 0b0111) shl 6
+        return x or y or z
     }
-    fun find(a: Int): Int {
-        var root = a
-        while (true) {
-            val y = parent[root]
-            if (y == root) break
-            root = y
-        }
-        if (path_compress) {
-            var y = a
-            while (y != root) {
-                val yp = parent[y]
-                parent[y] = root
-                y = yp
-            }
-        }
-        return root
+    fun add(v: BlockVector3) {
+        // I know this is incorrect
+        _size++
+        bitSet(v).set(bit(v))
     }
+    val size: Int get() = _size
+    operator fun contains(v: BlockVector3): Boolean = bitSet(v).get(bit(v))
 }
