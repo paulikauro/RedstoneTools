@@ -8,9 +8,7 @@ import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.CuboidRegion
 import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.regions.selector.CuboidRegionSelector
-import com.sk89q.worldedit.util.collection.BlockMap
 import com.sk89q.worldedit.util.formatting.text.TextComponent
-import java.util.AbstractSet
 import java.util.BitSet
 import java.util.HashMap
 import kotlin.system.measureTimeMillis
@@ -132,23 +130,26 @@ class That(private val worldEdit: WorldEdit) : BaseCommand() {
     }
 }
 
-// 9 bit address, 64 bytes
-private const val CHUNK_SIZE = 512
+private const val X_BITS = 4
+private const val Y_BITS = 4
+private const val Z_BITS = 4
+private const val CHUNK_SIZE = 1 shl (X_BITS + Y_BITS + Z_BITS)
 
 class BlockSet {
     private val map = HashMap<Long, BitSet>()
     private var _size = 0
     private fun bitSet(v: BlockVector3): BitSet {
-        val x = (v.x ushr 3).toLong() shl 35
-        val z = (v.z ushr 3).toLong() shl 6
-        val y = (v.y ushr 3).toLong() and 0b00_111_111
+        val yRestBits = 9 - Y_BITS
+        val x = (v.x ushr X_BITS).toLong() shl (32 - Z_BITS + yRestBits)
+        val z = (v.z ushr Z_BITS).toLong() shl yRestBits
+        val y = ((v.y ushr Y_BITS) and ((1 shl yRestBits) - 1)).toLong()
         val key = x or z or y
         return map.getOrPut(key) { BitSet(CHUNK_SIZE) }
     }
     private fun bit(v: BlockVector3): Int {
-        val x = (v.x and 0b0111)
-        val y = (v.y and 0b0111) shl 3
-        val z = (v.z and 0b0111) shl 6
+        val x = v.x and ((1 shl X_BITS) - 1)
+        val y = (v.y and ((1 shl Y_BITS) - 1)) shl X_BITS
+        val z = (v.z and ((1 shl Z_BITS) - 1)) shl (X_BITS + Y_BITS)
         return x or y or z
     }
     fun add(v: BlockVector3) {
