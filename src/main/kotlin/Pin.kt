@@ -4,8 +4,12 @@ import co.aikar.commands.BaseCommand
 import co.aikar.commands.BukkitCommandCompletionContext
 import co.aikar.commands.CommandCompletions
 import co.aikar.commands.annotation.*
+import com.sk89q.worldedit.bukkit.BukkitAdapter
+import com.sk89q.worldedit.util.SideEffectSet
 import org.bukkit.Location
 import org.bukkit.Material
+import org.bukkit.block.BlockFace
+import org.bukkit.block.data.FaceAttachable
 import org.bukkit.block.data.type.Switch
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -25,6 +29,13 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
     data class Pin(val location: Location)
     private val pins = mutableMapOf<Pair<UUID, String>, Pin>()
 
+    private val Switch.attachedBlockFace: BlockFace
+        get() = when (attachedFace) {
+            FaceAttachable.AttachedFace.CEILING -> BlockFace.DOWN
+            FaceAttachable.AttachedFace.FLOOR -> BlockFace.UP
+            FaceAttachable.AttachedFace.WALL -> facing
+        }
+
     sealed interface PinStateResult {
         data object PinDestroyed : PinStateResult
         data class OK(val newState: PinState) : PinStateResult
@@ -39,15 +50,13 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
         val lever = block.blockData as? Switch ?: return PinStateResult.PinDestroyed
         val newState = f(PinState(lever.isPowered))
         lever.isPowered = newState.value
-        block.blockData = lever
-//        block.state.update(true, true)
-//        // todo get the attached block instead of this hack
-//        val t = { x: Int, y: Int, z: Int -> Triple(x, y, z) }
-//        for (x in -2..2) for (y in -2..2) for (z in -2..2) {
-//            val b = location.clone().add(x.toDouble(), y.toDouble(), z.toDouble()).block
-//            b.state.update(true, true)
-//            b.setBlockData(b.blockData, true)
-//        }
+        block.setBlockData(lever, true)
+
+        val attachedTo = block.getRelative(lever.attachedBlockFace.oppositeFace)
+        val weWorld = BukkitAdapter.adapt(block.world)
+        val effects = SideEffectSet.defaults()
+        weWorld.applySideEffects(location.toBlockVector3(), BukkitAdapter.adapt(lever), effects)
+        weWorld.applySideEffects(attachedTo.location.toBlockVector3(), BukkitAdapter.adapt(attachedTo.blockData), effects)
         return PinStateResult.OK(newState)
     }
 
