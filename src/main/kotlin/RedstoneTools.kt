@@ -44,6 +44,16 @@ class RedstoneTools : JavaPlugin() {
     }
 
     override fun onEnable() {
+        saveDefaultConfig()
+        val thatSection = config.getConfigurationSection("that") ?: config.createSection("that")
+        val thatConfig = thatSection.run {
+            // note the defaults are duplicated in here, config.yml and ThatConfig, it's a temporary solution
+            ThatConfig(
+                sizeLimit = getInt("sizeLimit", 200),
+                maxTimePerTickMs = getInt("maxTimePerTickMs", 30),
+                maxTicks = getInt("maxTicks", 5),
+            )
+        }
         val wePlugin = server.pluginManager.getPlugin("WorldEdit")
         if (wePlugin !is WorldEditPlugin) {
             logger.severe("Could not load WorldEdit! RedstoneTools requires WorldEdit to function properly.")
@@ -108,7 +118,7 @@ class RedstoneTools : JavaPlugin() {
             arrayOf(
                 RStack(worldEdit),
                 Find(worldEdit),
-                That(worldEdit, this@RedstoneTools),
+                That(thatConfig, worldEdit, this@RedstoneTools),
                 SignSearch(worldEdit),
                 Container(),
                 Slab(),

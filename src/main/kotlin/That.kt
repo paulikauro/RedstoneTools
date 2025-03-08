@@ -15,13 +15,23 @@ import java.util.BitSet
 import java.util.HashMap
 import java.util.concurrent.CompletableFuture
 
-private const val ITERATIONS_LIMIT = 160
-private const val SIZE_LIMIT = 200
+
+data class ThatConfig(
+    val sizeLimit: Int = 200,
+    val maxTimePerTickMs: Int = 30,
+    val maxTicks: Int = 5,
+)
+
+// unsure if this needs to be configurable, but probably doesn't matter
+private const val ITERATIONS_PER_BURST = 2000
 
 @CommandAlias("/that|/hsel")
 @Description("Select the build you're looking at")
 @CommandPermission("redstonetools.that")
-class That(private val worldEdit: WorldEdit, private val plugin: Plugin) : BaseCommand() {
+class That(private val config: ThatConfig, private val worldEdit: WorldEdit, private val plugin: Plugin) : BaseCommand() {
+    private val sizeLimit = config.sizeLimit
+    private val maxNsPerTick = config.maxTimePerTickMs * 1_000_000
+
     @Default
     fun that(
         player: WEPlayer,
@@ -29,7 +39,7 @@ class That(private val worldEdit: WorldEdit, private val plugin: Plugin) : BaseC
         mask: Mask,
     ) {
         // NOTE: this does not use the mask!
-        val target = player.getBlockTrace(ITERATIONS_LIMIT)?.toVector()?.toBlockPoint() ?: run {
+        val target = player.getBlockTrace(config.sizeLimit)?.toVector()?.toBlockPoint() ?: run {
             player.printError(TextComponent.of("No build in sight!"))
             return
         }
@@ -43,15 +53,17 @@ class That(private val worldEdit: WorldEdit, private val plugin: Plugin) : BaseC
                     sel.explainRegionAdjust(player, session)
                     player.printInfo(TextComponent.of("Build selected."))
                 }
-                is ExpandResult.LimitReached ->
-                    player.printError(TextComponent.of("WARNING: ${result.kind} limit reached, check your selection!"))
+                is ExpandResult.LimitExceeded ->
+                    player.printError(TextComponent.of( "${result.kind} limit exceeded. Your selection was not changed."))
             }
         }
     }
+
     sealed interface ExpandResult {
-        data class LimitReached(val kind: String) : ExpandResult
+        data class LimitExceeded(val kind: String) : ExpandResult
         data object Done : ExpandResult
     }
+
     private fun expandRegion(target: BlockVector3, mask: Mask): CompletableFuture<Pair<CuboidRegion, ExpandResult>> {
         val offsets = arrayOf(
             BlockVector3.UNIT_X,
@@ -85,20 +97,19 @@ class That(private val worldEdit: WorldEdit, private val plugin: Plugin) : BaseC
             }
         }
         val future = CompletableFuture<Pair<CuboidRegion, ExpandResult>>()
-        var nextIters = 0
+        var ticks = 0
         fun next() {
-            nextIters++
+            ticks++
             val startNs = nanoTime()
-            // TODO extract config options
             var sizeLimitReached = false
-            while (nanoTime() - startNs < 30_000_000 && !sizeLimitReached && queue.isNotEmpty()) {
-                doWork(1000)
-                sizeLimitReached = max.subtract(min).run { x >= SIZE_LIMIT || y >= SIZE_LIMIT || z >= SIZE_LIMIT }
+            while (nanoTime() - startNs <= maxNsPerTick && !sizeLimitReached && queue.isNotEmpty()) {
+                doWork(ITERATIONS_PER_BURST)
+                sizeLimitReached = max.subtract(min).run { x >= sizeLimit || y >= sizeLimit || z >= sizeLimit }
             }
             val res = when {
                 queue.isEmpty() ->  ExpandResult.Done
-                sizeLimitReached -> ExpandResult.LimitReached("size")
-                nextIters >= 5 -> ExpandResult.LimitReached("time")
+                sizeLimitReached -> ExpandResult.LimitExceeded("Size")
+                ticks > config.maxTicks -> ExpandResult.LimitExceeded("Time")
                 else -> {
                     Bukkit.getScheduler().runTaskLater(plugin, ::next, 1)
                     return
@@ -109,7 +120,6 @@ class That(private val worldEdit: WorldEdit, private val plugin: Plugin) : BaseC
         next()
         return future
     }
-
 }
 
 private const val X_BITS = 4
@@ -117,7 +127,7 @@ private const val Y_BITS = 4
 private const val Z_BITS = 4
 private const val CHUNK_SIZE = 1 shl (X_BITS + Y_BITS + Z_BITS)
 
-class BlockSet {
+private class BlockSet {
     private val map = HashMap<Long, BitSet>()
     private fun bitSet(v: BlockVector3): BitSet {
         val yRestBits = 9 - Y_BITS

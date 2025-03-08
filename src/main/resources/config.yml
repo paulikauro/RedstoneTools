@@ -1,0 +1,7 @@
+that:
+  # x-, y- or z-dimensions of selection cannot exceed this
+  sizeLimit: 200
+  # how many milliseconds can be used for expanding selection each tick (per player per command invocation)
+  maxTimePerTickMs: 30
+  # maximum number of ticks to use for expanding selection before giving up
+  maxTicks: 5
