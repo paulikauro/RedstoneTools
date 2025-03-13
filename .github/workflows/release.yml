@@ -22,7 +22,7 @@ jobs:
 
       - name: Get version
         id: version
-        run: echo ::set-output name=version::$(./gradlew -q getVersion)
+        run: echo "version=$(./gradlew -q getVersion)" >> $GITHUB_OUTPUT
 
       - name: Copy jar
         run: cp build/libs/RedstoneTools*-all.jar asset.jar
