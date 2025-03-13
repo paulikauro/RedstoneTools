@@ -104,7 +104,7 @@ class That(private val config: ThatConfig, private val worldEdit: WorldEdit, pri
             var sizeLimitReached = false
             while (nanoTime() - startNs <= maxNsPerTick && !sizeLimitReached && queue.isNotEmpty()) {
                 doWork(ITERATIONS_PER_BURST)
-                sizeLimitReached = max.subtract(min).run { x >= sizeLimit || y >= sizeLimit || z >= sizeLimit }
+                sizeLimitReached = max.subtract(min).run { x > sizeLimit || y > sizeLimit || z > sizeLimit }
             }
             val res = when {
                 queue.isEmpty() ->  ExpandResult.Done
