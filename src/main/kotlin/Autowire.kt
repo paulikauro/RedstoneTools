@@ -5,8 +5,7 @@ import co.aikar.commands.annotation.CommandAlias
 import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Default
 import co.aikar.commands.annotation.Description
-import net.md_5.bungee.api.ChatMessageType
-import net.md_5.bungee.api.chat.TextComponent
+import net.kyori.adventure.text.Component
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Material
@@ -34,12 +33,14 @@ class Autowire(
     @Default
     fun toggleAutowire(player: Player) {
         player.sendActionBar(
-            if (autos.remove(player.uniqueId)) {
-                "Auto wire Disabled"
-            } else {
-                autos.add(player.uniqueId)
-                "Auto wire Enabled"
-            }
+            Component.text(
+                if (autos.remove(player.uniqueId)) {
+                    "Auto wire Disabled"
+                } else {
+                    autos.add(player.uniqueId)
+                    "Auto wire Enabled"
+                }
+            )
         )
     }
 

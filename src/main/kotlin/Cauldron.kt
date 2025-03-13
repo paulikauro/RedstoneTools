@@ -2,6 +2,7 @@ package redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
+import net.kyori.adventure.text.Component
 import org.bukkit.Material
 import org.bukkit.Sound
 import org.bukkit.block.Block
@@ -25,12 +26,14 @@ class Cauldron : BaseCommand(), Listener {
     @Default
     fun toggleCauldronMode(player: Player) {
         player.sendActionBar(
-            if (enabledPlayers.remove(player.uniqueId)) {
-                "Cauldron Mode Disabled"
-            } else {
-                enabledPlayers.add(player.uniqueId)
-                "Cauldron Mode Enabled"
-            }
+            Component.text(
+                if (enabledPlayers.remove(player.uniqueId)) {
+                    "Cauldron Mode Disabled"
+                } else {
+                    enabledPlayers.add(player.uniqueId)
+                    "Cauldron Mode Enabled"
+                }
+            )
         )
     }
 
@@ -54,7 +57,7 @@ class Cauldron : BaseCommand(), Listener {
         block.state.update(true, false)
         val sound = if (level == 0) Sound.ITEM_BUCKET_EMPTY else Sound.ITEM_BUCKET_FILL
         block.world.playSound(block.location, sound, 1.0f, 1.0f)
-        player.sendActionBar("Cauldron water level: $level")
+        player.sendActionBar(Component.text("Cauldron water level: $level"))
     }
 
     private fun updateCauldron(block: Block): Int {

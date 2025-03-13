@@ -6,7 +6,8 @@ import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.util.formatting.text.TextComponent
 import com.sk89q.worldedit.util.formatting.text.format.TextColor
-import de.tr7zw.nbtapi.NBTItem
+import de.tr7zw.nbtapi.NBT
+import de.tr7zw.nbtapi.iface.ReadWriteItemNBT
 import org.bukkit.Location
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
@@ -25,21 +26,22 @@ fun String.withHighlightedReplacement(replacement: String): TextComponent =
 
 fun Location.toBlockVector3(): BlockVector3 = BlockVector3.at(x, y, z)
 
-fun NBTItem.addFakeEnchant() {
-    addCompound("Enchantments")
-    val enchantments = getCompoundList("Enchantments")
-    enchantments.addCompound().apply {
+// 😎
+@Suppress("UNCHECKED_CAST")
+inline fun <T : ItemMeta> ItemStack.modifyMeta(action: T.() -> Unit) {
+    itemMeta = (itemMeta as T).apply(action)
+}
+
+fun ItemStack.modifyNBT(action: ReadWriteItemNBT.() -> Unit) = this.also { NBT.modify(this, action) }
+
+fun ReadWriteItemNBT.addFakeEnchant() {
+    getCompoundList("Enchantments").addCompound().apply {
         setString("id", "minecraft:knockback")
         setShort("lvl", 1.toShort())
     }
     setInteger("HideFlags", 1)
 }
 
-// 😎
-@Suppress("UNCHECKED_CAST")
-inline fun <T : ItemMeta> ItemStack.modifyMeta(action: T.() -> Unit) {
-    itemMeta = (itemMeta as T).apply(action)
-}
 
 fun LocalSession.getSelectionOrNull(): Region? = try {
     getSelection(selectionWorld ?: throw IncompleteRegionException())

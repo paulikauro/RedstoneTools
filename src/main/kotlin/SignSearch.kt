@@ -124,14 +124,6 @@ private fun String.findFirstMatch(pattern: Pattern): Match? {
     return Match(matcher.group(), matcher.start(), matcher.end())
 }
 
-// TODO: ???
-private fun String.findAll(pattern: Pattern) = sequence {
-    val matcher = pattern.matcher(this@findAll)
-    while (matcher.find()) {
-        yield(Match(matcher.group(), matcher.start(), matcher.end()))
-    }
-}
-
 class SearchPageCompletionHandler :
     CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
     override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> {
