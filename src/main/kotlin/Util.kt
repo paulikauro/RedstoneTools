@@ -2,6 +2,9 @@ package redstonetools
 
 import com.sk89q.worldedit.IncompleteRegionException
 import com.sk89q.worldedit.LocalSession
+import com.sk89q.worldedit.WorldEdit
+import com.sk89q.worldedit.extension.input.ParserContext
+import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.util.formatting.text.TextComponent
@@ -42,6 +45,16 @@ fun ReadWriteItemNBT.addFakeEnchant() {
     setInteger("HideFlags", 1)
 }
 
+fun parseMaskOrThrow(arg: String, worldEdit: WorldEdit, localSession: LocalSession?, player: WEPlayer?): Mask {
+    val parserContext = ParserContext().apply {
+        actor = player
+        world = player?.world
+        session = localSession
+        extent = player?.world
+        isRestricted = true
+    }
+    return worldEdit.maskFactory.parseFromInput(arg, parserContext)
+}
 
 fun LocalSession.getSelectionOrNull(): Region? = try {
     getSelection(selectionWorld ?: throw IncompleteRegionException())

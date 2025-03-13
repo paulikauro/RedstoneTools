@@ -57,7 +57,7 @@ class Slab : BaseCommand() {
 }
 
 class SlabListener : Listener {
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     fun onSlabPlace(event: BlockPlaceEvent) {
         val slabData = event.blockPlaced.blockData as? Slab ?: return
         if (slabData.type != Slab.Type.TOP) return

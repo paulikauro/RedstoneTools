@@ -7,7 +7,6 @@ import com.sk89q.worldedit.WorldEditException
 import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
 import com.sk89q.worldedit.extension.factory.MaskFactory
-import com.sk89q.worldedit.extension.input.ParserContext
 import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.Region
@@ -87,14 +86,7 @@ class RedstoneTools : JavaPlugin() {
             commandContexts.registerContext(Mask::class.java) { context ->
                 val player = context.player?.let(BukkitAdapter::adapt)
                 val localSession = player?.let(worldEdit.sessionManager::get)
-                val parserContext = ParserContext().apply {
-                    actor = player
-                    world = player?.world
-                    session = localSession
-                    extent = player?.world
-                    isRestricted = true
-                }
-                worldEdit.maskFactory.parseFromInput(context.popFirstArg(), parserContext)
+                parseMaskOrThrow(context.popFirstArg(), worldEdit, localSession, player)
             }
             fun BukkitCommandExecutionContext.requireWEPlayer(): com.sk89q.worldedit.entity.Player =
                 player?.let(BukkitAdapter::adapt) ?: throw ConditionFailedException("This can only be run by a player")

@@ -2,6 +2,7 @@ package redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
+import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
@@ -33,18 +34,31 @@ class That(private val config: ThatConfig, private val worldEdit: WorldEdit, pri
     private val maxNsPerTick = config.maxTimePerTickMs * 1_000_000
 
     @Default
+    @CommandCompletion("@we_mask")
     fun that(
         player: WEPlayer,
-        @Default("#existing")
-        mask: Mask,
+        localSession: LocalSession,
+        args: Array<String>,
     ) {
+        // very crappy argument parsing
+        // plan is to replace ACF at some point so not going to waste a lot of effort in this
+        var offsets = Offsets.DEFAULT
+        var maskStr = "#existing"
+        for (arg in args) {
+            when (arg) {
+                "-d" -> offsets = Offsets.DIAG
+                "-dd" -> offsets = Offsets.VERY_DIAG
+                else -> maskStr = arg
+            }
+        }
+        val mask = parseMaskOrThrow(maskStr, worldEdit, localSession, player)
         // NOTE: this does not use the mask!
         val target = player.getBlockTrace(config.sizeLimit)?.toVector()?.toBlockPoint() ?: run {
             player.printError(TextComponent.of("No build in sight!"))
             return
         }
 
-        expandRegion(target, mask).thenAccept { (region, result) ->
+        expandRegion(target, mask, offsets).thenAccept { (region, result) ->
             when (result) {
                 is ExpandResult.Done -> {
                     val sel = CuboidRegionSelector(player.world, region.pos1, region.pos2)
@@ -64,15 +78,7 @@ class That(private val config: ThatConfig, private val worldEdit: WorldEdit, pri
         data object Done : ExpandResult
     }
 
-    private fun expandRegion(target: BlockVector3, mask: Mask): CompletableFuture<Pair<CuboidRegion, ExpandResult>> {
-        val offsets = arrayOf(
-            BlockVector3.UNIT_X,
-            BlockVector3.UNIT_Y,
-            BlockVector3.UNIT_Z,
-            BlockVector3.UNIT_MINUS_X,
-            BlockVector3.UNIT_MINUS_Y,
-            BlockVector3.UNIT_MINUS_Z,
-        )
+    private fun expandRegion(target: BlockVector3, mask: Mask, offsets: List<BlockVector3>): CompletableFuture<Pair<CuboidRegion, ExpandResult>> {
         var min = target
         var max = target
         val visited = BlockSet()
@@ -147,4 +153,48 @@ private class BlockSet {
         bitSet(v).set(bit(v))
     }
     operator fun contains(v: BlockVector3): Boolean = bitSet(v).get(bit(v))
+}
+
+private object Offsets {
+    private fun v(x: Int, y: Int, z: Int) = BlockVector3.at(x, y, z)
+
+    val DEFAULT = listOf(
+        v(1, 0, 0),
+        v(-1, 0, 0),
+        v(0, 1, 0),
+        v(0, -1, 0),
+        v(0, 0, 1),
+        v(0, 0, -1),
+    )
+    val DIAG = DEFAULT + listOf(
+        // top layer
+        v(1, 1, 0),
+        v(-1, 1, 0),
+        v(0, 1, 1),
+        v(0, 1, -1),
+
+        // bottom layer
+        v(1, -1, 0),
+        v(-1, -1, 0),
+        v(0, -1, 1),
+        v(0, -1, -1),
+
+        // mid layer
+        v(1, 0, 1),
+        v(-1, 0, 1),
+        v(1, 0, -1),
+        v(-1, 0, -1),
+    )
+    val VERY_DIAG = DIAG + listOf(
+        // top
+        v(1, 1, 1),
+        v(-1, 1, 1),
+        v(1, 1, -1),
+        v(-1, 1, -1),
+        // bottom
+        v(1, -1, 1),
+        v(-1, -1, 1),
+        v(1, -1, -1),
+        v(-1, -1, -1),
+    )
 }
