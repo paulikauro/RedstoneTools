@@ -48,6 +48,7 @@ class That(private val config: ThatConfig, private val worldEdit: WorldEdit, pri
             when (arg) {
                 "-d" -> offsets = Offsets.DIAG
                 "-dd" -> offsets = Offsets.VERY_DIAG
+                "-ddd" -> offsets = Offsets.VERY_VERY_DIAG
                 else -> maskStr = arg
             }
         }
@@ -178,20 +179,21 @@ private object Offsets {
         v(-1, -1, 0),
         v(0, -1, 1),
         v(0, -1, -1),
-
+    )
+    val VERY_DIAG = DIAG + listOf(
         // mid layer
         v(1, 0, 1),
         v(-1, 0, 1),
         v(1, 0, -1),
         v(-1, 0, -1),
     )
-    val VERY_DIAG = DIAG + listOf(
-        // top
+    val VERY_VERY_DIAG = VERY_DIAG + listOf(
+        // top corners
         v(1, 1, 1),
         v(-1, 1, 1),
         v(1, 1, -1),
         v(-1, 1, -1),
-        // bottom
+        // bottom corners
         v(1, -1, 1),
         v(-1, -1, 1),
         v(1, -1, -1),
