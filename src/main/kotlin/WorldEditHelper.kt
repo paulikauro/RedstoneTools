@@ -64,7 +64,7 @@ class WorldEditHelper(plugin: JavaPlugin, private val worldEdit: WorldEdit) : Li
                 else -> DARK_RED
             }
             val line = with(selection) { arrayOf(width, height, length) }
-                .joinToString(separator = "${WHITE}x") { "${color(it)}$it" }
+                .joinToString(separator = "${GRAY}x") { "${color(it)}$it" }
             add("   $line")
         }
         player.scoreboard = Bukkit.getScoreboardManager()!!.newScoreboard.apply {

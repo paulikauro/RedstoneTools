@@ -2,7 +2,10 @@ package redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
+import de.tr7zw.nbtapi.NBT
 import de.tr7zw.nbtapi.NBTItem
+import de.tr7zw.nbtapi.iface.ReadWriteItemNBT
+import net.kyori.adventure.text.Component
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
@@ -30,11 +33,12 @@ class Container : BaseCommand() {
         val itemStack = ItemStack(material, 1)
         // ItemMeta is never null because it's only null if material is air.
         itemStack.modifyMeta<ItemMeta> {
-            setDisplayName("Power ${power.originalName}")
-            lore = listOf("Power ${power.originalName}")
+            val text = Component.text("Power ${power.originalName}")
+            displayName(text)
+            lore(listOf(text))
         }
 
-        return NBTItem(itemStack).apply {
+        return itemStack.modifyNBT {
             addFakeEnchant()
             if (material == Material.JUKEBOX) {
                 addDisk(power.value)
@@ -48,13 +52,13 @@ class Container : BaseCommand() {
                 }
                 addItems(power.value, slots)
             }
-        }.item
+        }
     }
 
-    private fun NBTItem.addItems(power: Int, slots: Int) {
+    private fun ReadWriteItemNBT.addItems(power: Int, slots: Int) {
         var itemsNeeded = itemsNeeded(power, slots)
         if (itemsNeeded == 0) return
-        val itemList = addCompound("BlockEntityTag").getCompoundList("Items")
+        val itemList = getOrCreateCompound("BlockEntityTag").getCompoundList("Items")
         for (i in 0..(itemsNeeded / 64.toFloat()).toInt()) {
             itemList.addCompound().apply {
                 setByte("Count", min(itemsNeeded, 64).toByte())
@@ -65,7 +69,7 @@ class Container : BaseCommand() {
         }
     }
 
-    private fun NBTItem.addDisk(power: Int) {
+    private fun ReadWriteItemNBT.addDisk(power: Int) {
         val diskId = when (power) {
             1 -> "minecraft:music_disc_13"
             2 -> "minecraft:music_disc_cat"
@@ -85,8 +89,8 @@ class Container : BaseCommand() {
             else -> return
         }
 
-        addCompound("BlockEntityTag").apply {
-            addCompound("RecordItem").apply {
+        getOrCreateCompound("BlockEntityTag").apply {
+            getOrCreateCompound("RecordItem").apply {
                 setString("id", diskId)
                 setByte("Count", 1)
             }

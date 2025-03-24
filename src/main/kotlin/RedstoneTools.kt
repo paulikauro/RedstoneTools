@@ -7,7 +7,6 @@ import com.sk89q.worldedit.WorldEditException
 import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
 import com.sk89q.worldedit.extension.factory.MaskFactory
-import com.sk89q.worldedit.extension.input.ParserContext
 import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.Region
@@ -17,10 +16,8 @@ import com.sk89q.worldedit.util.formatting.text.TextComponent
 import com.sk89q.worldedit.util.formatting.text.event.ClickEvent
 import com.sk89q.worldedit.util.formatting.text.event.HoverEvent
 import com.sk89q.worldedit.util.formatting.text.format.TextColor
-import net.md_5.bungee.api.ChatMessageType
 import org.bukkit.ChatColor
 import org.bukkit.Material
-import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.logging.Level
 
@@ -89,14 +86,7 @@ class RedstoneTools : JavaPlugin() {
             commandContexts.registerContext(Mask::class.java) { context ->
                 val player = context.player?.let(BukkitAdapter::adapt)
                 val localSession = player?.let(worldEdit.sessionManager::get)
-                val parserContext = ParserContext().apply {
-                    actor = player
-                    world = player?.world
-                    session = localSession
-                    extent = player?.world
-                    isRestricted = true
-                }
-                worldEdit.maskFactory.parseFromInput(context.popFirstArg(), parserContext)
+                parseMaskOrThrow(context.popFirstArg(), worldEdit, localSession, player)
             }
             fun BukkitCommandExecutionContext.requireWEPlayer(): com.sk89q.worldedit.entity.Player =
                 player?.let(BukkitAdapter::adapt) ?: throw ConditionFailedException("This can only be run by a player")
@@ -131,10 +121,6 @@ class RedstoneTools : JavaPlugin() {
             ).forEach(::registerCommand)
         }
     }
-}
-
-fun Player.sendActionBar(message: String) {
-    spigot().sendMessage(ChatMessageType.ACTION_BAR, net.md_5.bungee.api.chat.TextComponent(message))
 }
 
 class RedstoneToolsException(message: String) : Exception(message)

@@ -4,7 +4,6 @@ import co.aikar.commands.BaseCommand
 import co.aikar.commands.ConditionFailedException
 import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.*
-import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.function.mask.ExistingBlockMask
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy
 import com.sk89q.worldedit.function.operation.Operations
@@ -13,7 +12,6 @@ import com.sk89q.worldedit.math.transform.AffineTransform
 import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.util.Direction
 import com.sk89q.worldedit.util.formatting.text.TextComponent
-import org.bukkit.entity.Player
 import java.lang.Integer.parseInt
 import kotlin.math.abs
 
@@ -56,8 +54,8 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         if (numbers.size > 2) {
             throw ConditionFailedException("Too many arguments!")
         }
-        var count = numbers.getOrDefault(0, 1)
-        var spacing = numbers.getOrDefault(1, 2)
+        var count = numbers.getOrNull(0) ?: 1
+        var spacing = numbers.getOrNull(1) ?: 2
         if (count < 0) {
             count *= -1
             spacing *= -1
@@ -146,5 +144,3 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         // check length, because 'd' and 'u' alone are not diagonal directions (they're just up or down)
         direction.length > 1 && direction.last().lowercaseChar() == upOrDown
 }
-
-private fun <E> List<E>.getOrDefault(index: Int, default: E): E = getOrNull(index) ?: default

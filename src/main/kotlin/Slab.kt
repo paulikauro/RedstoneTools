@@ -5,6 +5,7 @@ import co.aikar.commands.BukkitCommandCompletionContext
 import co.aikar.commands.CommandCompletions
 import co.aikar.commands.annotation.*
 import de.tr7zw.nbtapi.NBTItem
+import net.kyori.adventure.text.Component
 import org.bukkit.Material
 import org.bukkit.block.data.type.Slab
 import org.bukkit.entity.Player
@@ -22,18 +23,20 @@ class Slab : BaseCommand() {
     @CommandCompletion("@slabs")
     fun slab(
         player: Player,
-        args: Array<String>
+        @Optional
+        type: String?,
     ) {
         val slab: ItemStack?
-        if (args.isNotEmpty()) {
-            slab = getSlab(args[0]) ?: throw RedstoneToolsException("Invalid slab type specified.")
+        if (type != null) {
+            slab = getSlab(type) ?: throw RedstoneToolsException("Invalid slab type specified.")
             player.inventory.addItem(slab)
         } else {
             slab = getSlab(player.inventory.itemInMainHand.type.name)
             if (slab != null) {
                 player.inventory.setItemInMainHand(slab)
             } else {
-                player.inventory.addItem(getSlab(Material.SMOOTH_STONE_SLAB.toString()))
+                // kinda bad but it shouldn't be null
+                player.inventory.addItem(getSlab(Material.SMOOTH_STONE_SLAB.toString())!!)
             }
         }
     }
@@ -46,17 +49,15 @@ class Slab : BaseCommand() {
         blockData.type = Slab.Type.TOP
         itemStack.modifyMeta<BlockDataMeta> {
             setBlockData(blockData)
-            setDisplayName("Upside Down Slab")
-            lore = listOf("UpsiDownORE")
+            displayName(Component.text("Upside Down Slab"))
+            lore(listOf(Component.text("UpsiDownORE")))
         }
-        return NBTItem(itemStack).apply {
-            addFakeEnchant()
-        }.item
+        return itemStack.modifyNBT { addFakeEnchant() }
     }
 }
 
 class SlabListener : Listener {
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     fun onSlabPlace(event: BlockPlaceEvent) {
         val slabData = event.blockPlaced.blockData as? Slab ?: return
         if (slabData.type != Slab.Type.TOP) return
@@ -73,8 +74,7 @@ class SlabListener : Listener {
 
 class SlabCompletionHandler :
     CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
-    override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> = Material
-        .values()
+    override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> = Material.entries
         .filter { it.isBlock && it.createBlockData() is Slab }
         .map { it.toString().lowercase() }
 }

@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = ""
-version = "1.4"
+version = "1.4.1"
 
 plugins {
     val kotlinVersion = "2.1.10"
@@ -29,11 +29,9 @@ dependencies {
     implementation("com.google.re2j:re2j:1.6")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.0")
-    implementation("net.kyori:adventure-api:4.11.0")
-    implementation("net.kyori:adventure-text-serializer-gson:4.11.0")
 
     compileOnly("de.tr7zw:item-nbt-api-plugin:2.14.1")
-    compileOnly("org.spigotmc:spigot-api:1.17-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.2.0-SNAPSHOT")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
