@@ -44,7 +44,18 @@ class That(private val config: ThatConfig, private val worldEdit: WorldEdit, pri
         // plan is to replace ACF at some point so not going to waste a lot of effort in this
         var offsets = Offsets.DEFAULT
         var maskStr = "#existing"
+        var inQuotes = false
         for (arg in args) {
+            if (inQuotes) {
+                inQuotes = !arg.endsWith("\"")
+                maskStr += " $arg".removeSuffix("\"")
+                continue
+            }
+            if (arg.startsWith("\"")) {
+                maskStr = arg.removePrefix("\"").removeSuffix("\"")
+                inQuotes = !arg.endsWith("\"")
+                continue
+            }
             when (arg) {
                 "-d" -> offsets = Offsets.DIAG
                 "-dd" -> offsets = Offsets.VERY_DIAG
@@ -52,6 +63,7 @@ class That(private val config: ThatConfig, private val worldEdit: WorldEdit, pri
                 else -> maskStr = arg
             }
         }
+        if (inQuotes) throw RedstoneToolsException("Unterminated quote")
         val mask = parseMaskOrThrow(maskStr, worldEdit, localSession, player)
         // NOTE: this does not use the mask!
         val target = player.getBlockTrace(config.sizeLimit)?.toVector()?.toBlockPoint() ?: run {
