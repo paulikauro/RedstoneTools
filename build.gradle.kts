@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = ""
-version = "1.4.1-SNAPSHOT"
+version = "1.4.2-SNAPSHOT"
 
 plugins {
     val kotlinVersion = "2.1.10"
