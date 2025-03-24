@@ -22,8 +22,12 @@ common in redstoning.
 
 NOTE: The order of arguments does not matter apart from `count` and `spacing`.
 
-## `//that [mask]`
+## `//that [mask] [-d|-dd|-ddd]`
 Selects the build you're looking at. More specifically, it tries to select the smallest cuboid containing all connected blocks (according to mask, which defaults to `#existing`) starting from whatever block you're looking at.
+
+The diagonal connectivity check flags may change in the future. Each level includes the previous ones.
+
+![//that diagonal connectivity flag demonstration](that_diag.png)
 
 ## `//find [mask]`
 Search a selected region for a specific WorldEdit material mask.
