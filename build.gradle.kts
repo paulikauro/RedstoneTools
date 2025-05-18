@@ -5,7 +5,7 @@ group = ""
 version = "1.4.2-SNAPSHOT"
 
 plugins {
-    val kotlinVersion = "2.1.10"
+    val kotlinVersion = "2.1.21"
     kotlin("jvm") version kotlinVersion
     kotlin("kapt") version kotlinVersion
     id("com.gradleup.shadow") version "8.3.6"
@@ -26,26 +26,18 @@ dependencies {
     implementation(kotlin("stdlib"))
     implementation(kotlin("reflect"))
     implementation("co.aikar:acf-paper:0.5.1-SNAPSHOT")
-    implementation("com.google.re2j:re2j:1.6")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.0")
+    implementation("com.google.re2j:re2j:1.8")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
 
-    compileOnly("de.tr7zw:item-nbt-api-plugin:2.14.1")
-    compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
-    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.2.0-SNAPSHOT")
-
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
+    compileOnly("de.tr7zw:item-nbt-api-plugin:2.15.0")
+    compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
+    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.11-SNAPSHOT")
 }
 
 bukkit {
     main = "redstonetools.RedstoneTools"
-    apiVersion = "1.17"
+    apiVersion = "1.21"
     depend = listOf("WorldEdit", "NBTAPI")
-}
-
-tasks.test {
-    useJUnitPlatform()
 }
 
 tasks.shadowJar {
