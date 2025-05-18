@@ -34,6 +34,7 @@ class RedstoneTools : JavaPlugin() {
             sender.sendMessage("${ChatColor.DARK_GRAY}[${ChatColor.GRAY}RedstoneTools${ChatColor.DARK_GRAY}]${ChatColor.GRAY} $message")
             true
         }
+
         else -> {
             logger.log(Level.SEVERE, "handleCommandException", throwable)
             false
@@ -109,7 +110,7 @@ class RedstoneTools : JavaPlugin() {
                 RStack(worldEdit),
                 Find(worldEdit),
                 That(thatConfig, worldEdit, this@RedstoneTools),
-                SignSearch(worldEdit),
+                SignSearch(),
                 Container(),
                 Slab(),
                 autowire,

@@ -36,10 +36,10 @@ class Container : BaseCommand() {
             val text = Component.text("Power ${power.originalName}")
             displayName(text)
             lore(listOf(text))
+            setEnchantmentGlintOverride(true)
         }
 
         return itemStack.modifyNBT {
-            addFakeEnchant()
             if (material == Material.JUKEBOX) {
                 addDisk(power.value)
             } else {
