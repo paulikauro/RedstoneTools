@@ -15,7 +15,6 @@ import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.ItemStack
-import org.bukkit.plugin.Plugin
 import org.bukkit.plugin.PluginManager
 import java.util.*
 
@@ -24,8 +23,6 @@ import java.util.*
 @CommandPermission("redstonetools.autowire")
 class Autowire(
     private val pluginManager: PluginManager,
-    private val liveStack: LiveStack,
-    private val plugin: Plugin,
 ) : BaseCommand(), Listener {
     private val autos = mutableSetOf<UUID>()
 
