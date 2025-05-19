@@ -6,7 +6,6 @@ import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Default
 import co.aikar.commands.annotation.Description
 import net.kyori.adventure.text.Component
-import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Material
 import org.bukkit.block.data.type.RedstoneWire
@@ -51,40 +50,35 @@ class Autowire(
 
     @EventHandler(ignoreCancelled = true)
     fun onAutoWireEvent(event: BlockPlaceEvent) {
-        with(event) {
-            arrayOf(
-                player.uniqueId !in autos,
-                player.gameMode != GameMode.CREATIVE,
-                !block.blockData.material.isSolid,
-                blockPlaced.type.hasGravity(),
-            ).any { it }.ifTrue { return }
-        }
+        if (
+            event.player.uniqueId !in autos
+            || event.player.gameMode != GameMode.CREATIVE
+            || !event.block.blockData.material.isSolid
+            || event.blockPlaced.type.hasGravity()
+        ) return
         val wirePosition = event.blockPlaced.location.add(0.0, 1.0, 0.0)
         if (wirePosition.block.type != Material.AIR) return
         val airState = wirePosition.block.state
+        wirePosition.block.type = Material.REDSTONE_WIRE
         val blockPlaceEvent = BlockPlaceEvent(
             wirePosition.block,
             airState,
             event.blockPlaced,
-            ItemStack(Material.REDSTONE_WIRE),
+            ItemStack(Material.REDSTONE),
             event.player,
             true,
             event.hand
         )
         pluginManager.callEvent(blockPlaceEvent)
-        if (blockPlaceEvent.isCancelled) return
+        if (blockPlaceEvent.isCancelled) {
+            wirePosition.block.type = Material.AIR
+            return
+        }
         wirePosition.block.type = Material.REDSTONE_WIRE
         val wireData = Material.REDSTONE_WIRE.createBlockData() as RedstoneWire
         wireData.allowedFaces.forEach {
             wireData.setFace(it, RedstoneWire.Connection.SIDE)
         }
         wirePosition.block.blockData = wireData
-        Bukkit.getScheduler().runTask(plugin, Runnable {
-            liveStack.onLiveStackEvent(blockPlaceEvent)
-        })
     }
-}
-
-private inline fun Boolean.ifTrue(block: () -> Unit) {
-    if (this) block()
 }
