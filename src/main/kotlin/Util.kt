@@ -8,7 +8,7 @@ import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.Region
 import de.tr7zw.nbtapi.NBT
-import de.tr7zw.nbtapi.iface.ReadWriteItemNBT
+import de.tr7zw.nbtapi.iface.ReadWriteNBT
 import org.bukkit.Location
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
@@ -21,7 +21,7 @@ inline fun <T : ItemMeta> ItemStack.modifyMeta(action: T.() -> Unit) {
     itemMeta = (itemMeta as T).apply(action)
 }
 
-fun ItemStack.modifyNBT(action: ReadWriteItemNBT.() -> Unit) = this.also { NBT.modify(this, action) }
+fun ItemStack.modifyComponents(action: ReadWriteNBT.() -> Unit) = this.also { NBT.modifyComponents(this, action) }
 
 fun parseMaskOrThrow(arg: String, worldEdit: WorldEdit, localSession: LocalSession?, player: WEPlayer?): Mask {
     val parserContext = ParserContext().apply {

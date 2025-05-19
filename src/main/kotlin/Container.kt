@@ -2,9 +2,8 @@ package redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
-import de.tr7zw.nbtapi.NBT
-import de.tr7zw.nbtapi.NBTItem
-import de.tr7zw.nbtapi.iface.ReadWriteItemNBT
+import de.tr7zw.nbtapi.iface.ReadWriteNBT
+import de.tr7zw.nbtapi.iface.ReadWriteNBTCompoundList
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -39,9 +38,12 @@ class Container : BaseCommand() {
             setEnchantmentGlintOverride(true)
         }
 
-        return itemStack.modifyNBT {
+        return itemStack.modifyComponents {
             if (material == Material.JUKEBOX) {
-                addDisk(power.value)
+                getOrCreateCompound("minecraft:block_entity_data").apply {
+                    addDisk(power.value)
+                    setString("id", "minecraft:jukebox")
+                }
             } else {
                 val slots = when (material) {
                     Material.FURNACE -> 3
@@ -50,26 +52,27 @@ class Container : BaseCommand() {
                     Material.HOPPER -> 5
                     else -> throw RedstoneToolsException("Unknown material, this is a bug")
                 }
-                addItems(power.value, slots)
+                getCompoundList("minecraft:container").addItems(power.value, slots)
             }
         }
     }
 
-    private fun ReadWriteItemNBT.addItems(power: Int, slots: Int) {
+    private fun ReadWriteNBTCompoundList.addItems(power: Int, slots: Int) {
         var itemsNeeded = itemsNeeded(power, slots)
         if (itemsNeeded == 0) return
-        val itemList = getOrCreateCompound("BlockEntityTag").getCompoundList("Items")
         for (i in 0..(itemsNeeded / 64.toFloat()).toInt()) {
-            itemList.addCompound().apply {
-                setByte("Count", min(itemsNeeded, 64).toByte())
-                setString("id", "minecraft:redstone")
-                setByte("Slot", i.toByte())
+            addCompound().apply {
+                getOrCreateCompound("item").apply {
+                    setByte("count", min(itemsNeeded, 64).toByte())
+                    setString("id", "minecraft:redstone")
+                }
+                setByte("slot", i.toByte())
             }
             itemsNeeded -= 64
         }
     }
 
-    private fun ReadWriteItemNBT.addDisk(power: Int) {
+    private fun ReadWriteNBT.addDisk(power: Int) {
         val diskId = when (power) {
             1 -> "minecraft:music_disc_13"
             2 -> "minecraft:music_disc_cat"
@@ -89,13 +92,12 @@ class Container : BaseCommand() {
             else -> return
         }
 
-        getOrCreateCompound("BlockEntityTag").apply {
-            getOrCreateCompound("RecordItem").apply {
-                setString("id", diskId)
-                setByte("Count", 1)
-            }
-            setBoolean("has_record", true)
+        getOrCreateCompound("RecordItem").apply {
+            setString("id", diskId)
+            setByte("count", 1)
         }
+        // 6 minutes, longer than the longest song (blocks, 5:45)
+        setInteger("ticks_since_song_started", 6 * 60 * 20)
     }
 
     private fun itemsNeeded(power: Int, slots: Int): Int {
