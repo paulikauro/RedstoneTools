@@ -3,7 +3,10 @@ package redstonetools
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.ConditionFailedException
 import co.aikar.commands.annotation.*
-import com.sk89q.worldedit.*
+import com.sk89q.worldedit.LocalSession
+import com.sk89q.worldedit.UnknownDirectionException
+import com.sk89q.worldedit.WorldEdit
+import com.sk89q.worldedit.WorldEditException
 import com.sk89q.worldedit.function.mask.ExistingBlockMask
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy
 import com.sk89q.worldedit.function.operation.Operations
@@ -18,7 +21,7 @@ import kotlin.math.abs
 typealias WEPlayer = com.sk89q.worldedit.entity.Player
 
 private val BlockVector3.isUpright: Boolean
-    get() = x == 0 && z == 0
+    get() = x() == 0 && z() == 0
 
 @CommandAlias("/rstack|/rs")
 @Description("Redstone stacking command")

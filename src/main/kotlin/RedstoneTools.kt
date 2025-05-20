@@ -6,7 +6,7 @@ import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.WorldEditException
 import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
-import com.sk89q.worldedit.extension.factory.MaskFactory
+import com.sk89q.worldedit.extension.input.ParserContext
 import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.Region
@@ -205,11 +205,13 @@ class SignalContainer(val material: Material) {
     }
 }
 
-class MaskCompletionHandler(worldEdit: WorldEdit) :
+class MaskCompletionHandler(private val worldEdit: WorldEdit) :
     CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
-    private val maskFactory = MaskFactory(worldEdit)
     override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> =
-        maskFactory.getSuggestions(context.input)
+        worldEdit.maskFactory.getSuggestions(
+            context.input,
+            ParserContext().apply { actor = BukkitAdapter.adapt(context.player) }
+        )
 }
 
 data class LocationContainer(val location: BlockVector3, val match: TextComponent)
@@ -226,7 +228,7 @@ class LocationsPaginationBox(private val locations: MutableList<LocationContaine
         return TextComponent.of("${number + 1}: ")
             .append(locations[number].match)
             .color(TextColor.LIGHT_PURPLE)
-            .clickEvent(locations[number].location.run { ClickEvent.runCommand("/tp $x $y $z") })
+            .clickEvent(locations[number].location.run { ClickEvent.runCommand("/tp ${x()} ${y()} ${z()}") })
             .hoverEvent(HoverEvent.showText(TextComponent.of("Click to teleport")))
     }
 

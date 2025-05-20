@@ -38,15 +38,15 @@ class WorldEditHelper(plugin: JavaPlugin, private val worldEdit: WorldEdit) : Li
             player.hideHelper()
             return
         }
-        val bvMax = selection.maximumPoint
-        val bvMin = selection.minimumPoint
+        val min = selection.maximumPoint
+        val max = selection.minimumPoint
         val lines = buildList {
             add("${DARK_GREEN}Position A:")
-            add("   $GRAY${bvMax.blockX}$WHITE,$GRAY${bvMax.blockY}$WHITE,$GRAY${bvMax.blockZ}")
+            add("   $GRAY${min.x()}$WHITE,$GRAY${min.y()}$WHITE,$GRAY${min.z()}")
             val volume = selection.volume
             if (volume != 1L) {
                 add("${DARK_GREEN}Position B:")
-                add("   $GRAY${bvMin.blockX}$WHITE,$GRAY${bvMin.blockY}$WHITE,$GRAY${bvMin.blockZ}")
+                add("   $GRAY${max.x()}$WHITE,$GRAY${max.y()}$WHITE,$GRAY${max.z()}")
             }
             add("${DARK_GREEN}Volume:")
             val chatColor = when {
@@ -63,15 +63,16 @@ class WorldEditHelper(plugin: JavaPlugin, private val worldEdit: WorldEdit) : Li
                 x < 100 -> RED
                 else -> DARK_RED
             }
+
             val line = with(selection) { arrayOf(width, height, length) }
                 .joinToString(separator = "${GRAY}x") { "${color(it)}$it" }
             add("   $line")
         }
-        player.scoreboard = Bukkit.getScoreboardManager()!!.newScoreboard.apply {
+        player.scoreboard = Bukkit.getScoreboardManager().newScoreboard.apply {
             registerNewObjective(
                 Random.nextInt(1234567890).toString(),
                 "dummy",
-                "Current selection"
+                "Current selection",
             ).apply {
                 displaySlot = DisplaySlot.SIDEBAR
                 displayName = "${RED}Current Selection"
@@ -81,7 +82,7 @@ class WorldEditHelper(plugin: JavaPlugin, private val worldEdit: WorldEdit) : Li
     }
 
     private fun Player.hideHelper() {
-        scoreboard = Bukkit.getScoreboardManager()!!.newScoreboard
+        scoreboard = Bukkit.getScoreboardManager().newScoreboard
     }
 
     private fun Objective.addLinesToScoreboard(lines: List<String>) {

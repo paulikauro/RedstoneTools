@@ -1,7 +1,10 @@
 package redstonetools
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.annotation.*
+import co.aikar.commands.annotation.CommandAlias
+import co.aikar.commands.annotation.CommandPermission
+import co.aikar.commands.annotation.Default
+import co.aikar.commands.annotation.Description
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.function.mask.ExistingBlockMask
 import com.sk89q.worldedit.math.BlockVector3
@@ -60,9 +63,11 @@ class LiveStack(private val plugin: Plugin, private val worldEdit: WorldEdit) : 
                 event.isCancelled = true
                 event.player.sendMessage(Component.text("root block selected"))
             }
+
             is State.Enabled -> {
                 doLiveStack(event.block, state.displacements)
             }
+
             else -> Unit
         }
     }
@@ -80,7 +85,7 @@ class LiveStack(private val plugin: Plugin, private val worldEdit: WorldEdit) : 
         displacements: List<BlockVector3>,
     ) = Bukkit.getScheduler().runTask(plugin, Runnable {
         displacements.forEach {
-            val newBlock = block.location.add(it.x.toDouble(), it.y.toDouble(), it.z.toDouble()).block
+            val newBlock = block.location.add(it.x().toDouble(), it.y().toDouble(), it.z().toDouble()).block
             newBlock.blockData = block.blockData
         }
     })

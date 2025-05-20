@@ -13,8 +13,8 @@ import org.bukkit.Bukkit
 import org.bukkit.plugin.Plugin
 import java.lang.System.nanoTime
 import java.util.BitSet
-import java.util.HashMap
 import java.util.concurrent.CompletableFuture
+import kotlin.collections.ArrayDeque
 
 
 data class ThatConfig(
@@ -29,7 +29,8 @@ private const val ITERATIONS_PER_BURST = 2000
 @CommandAlias("/that|/hsel")
 @Description("Select the build you're looking at")
 @CommandPermission("redstonetools.that")
-class That(private val config: ThatConfig, private val worldEdit: WorldEdit, private val plugin: Plugin) : BaseCommand() {
+class That(private val config: ThatConfig, private val worldEdit: WorldEdit, private val plugin: Plugin) :
+    BaseCommand() {
     private val sizeLimit = config.sizeLimit
     private val maxNsPerTick = config.maxTimePerTickMs * 1_000_000
 
@@ -80,8 +81,9 @@ class That(private val config: ThatConfig, private val worldEdit: WorldEdit, pri
                     sel.explainRegionAdjust(player, session)
                     player.printInfo(TextComponent.of("Build selected."))
                 }
+
                 is ExpandResult.LimitExceeded ->
-                    player.printError(TextComponent.of( "${result.kind} limit exceeded. Your selection was not changed."))
+                    player.printError(TextComponent.of("${result.kind} limit exceeded. Your selection was not changed."))
             }
         }
     }
@@ -91,7 +93,11 @@ class That(private val config: ThatConfig, private val worldEdit: WorldEdit, pri
         data object Done : ExpandResult
     }
 
-    private fun expandRegion(target: BlockVector3, mask: Mask, offsets: List<BlockVector3>): CompletableFuture<Pair<CuboidRegion, ExpandResult>> {
+    private fun expandRegion(
+        target: BlockVector3,
+        mask: Mask,
+        offsets: List<BlockVector3>,
+    ): CompletableFuture<Pair<CuboidRegion, ExpandResult>> {
         var min = target
         var max = target
         val visited = BlockSet()
@@ -115,6 +121,7 @@ class That(private val config: ThatConfig, private val worldEdit: WorldEdit, pri
                 }
             }
         }
+
         val future = CompletableFuture<Pair<CuboidRegion, ExpandResult>>()
         var ticks = 0
         fun next() {
@@ -123,10 +130,10 @@ class That(private val config: ThatConfig, private val worldEdit: WorldEdit, pri
             var sizeLimitReached = false
             while (nanoTime() - startNs <= maxNsPerTick && !sizeLimitReached && queue.isNotEmpty()) {
                 doWork(ITERATIONS_PER_BURST)
-                sizeLimitReached = max.subtract(min).run { x > sizeLimit || y > sizeLimit || z > sizeLimit }
+                sizeLimitReached = max.subtract(min).run { x() > sizeLimit || y() > sizeLimit || z() > sizeLimit }
             }
             val res = when {
-                queue.isEmpty() ->  ExpandResult.Done
+                queue.isEmpty() -> ExpandResult.Done
                 sizeLimitReached -> ExpandResult.LimitExceeded("Size")
                 ticks > config.maxTicks -> ExpandResult.LimitExceeded("Time")
                 else -> {
@@ -150,21 +157,24 @@ private class BlockSet {
     private val map = HashMap<Long, BitSet>()
     private fun bitSet(v: BlockVector3): BitSet {
         val yRestBits = 9 - Y_BITS
-        val x = (v.x ushr X_BITS).toLong() shl (32 - Z_BITS + yRestBits)
-        val z = (v.z ushr Z_BITS).toLong() shl yRestBits
-        val y = ((v.y ushr Y_BITS) and ((1 shl yRestBits) - 1)).toLong()
+        val x = (v.x() ushr X_BITS).toLong() shl (32 - Z_BITS + yRestBits)
+        val z = (v.z() ushr Z_BITS).toLong() shl yRestBits
+        val y = ((v.y() ushr Y_BITS) and ((1 shl yRestBits) - 1)).toLong()
         val key = x or z or y
         return map.getOrPut(key) { BitSet(CHUNK_SIZE) }
     }
+
     private fun bit(v: BlockVector3): Int {
-        val x = v.x and ((1 shl X_BITS) - 1)
-        val y = (v.y and ((1 shl Y_BITS) - 1)) shl X_BITS
-        val z = (v.z and ((1 shl Z_BITS) - 1)) shl (X_BITS + Y_BITS)
+        val x = v.x() and ((1 shl X_BITS) - 1)
+        val y = (v.y() and ((1 shl Y_BITS) - 1)) shl X_BITS
+        val z = (v.z() and ((1 shl Z_BITS) - 1)) shl (X_BITS + Y_BITS)
         return x or y or z
     }
+
     fun add(v: BlockVector3) {
         bitSet(v).set(bit(v))
     }
+
     operator fun contains(v: BlockVector3): Boolean = bitSet(v).get(bit(v))
 }
 
