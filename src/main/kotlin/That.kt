@@ -65,8 +65,7 @@ class That(private val config: ThatConfig, private val worldEdit: WorldEdit, pri
         }
         if (inQuotes) throw RedstoneToolsException("Unterminated quote")
         val mask = parseMaskOrThrow(maskStr, worldEdit, localSession, player)
-        // NOTE: this does not use the mask!
-        val target = player.getBlockTrace(config.sizeLimit)?.toVector()?.toBlockPoint() ?: run {
+        val target = player.getBlockTrace(config.sizeLimit, false, mask)?.toVector()?.toBlockPoint() ?: run {
             player.printError(TextComponent.of("No build in sight!"))
             return
         }
