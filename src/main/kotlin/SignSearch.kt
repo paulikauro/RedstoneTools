@@ -9,7 +9,6 @@ import com.google.re2j.PatternSyntaxException
 import com.sk89q.jnbt.CompoundTag
 import com.sk89q.jnbt.ListTag
 import com.sk89q.jnbt.StringTag
-import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.function.RegionFunction
 import com.sk89q.worldedit.function.RegionMaskingFilter
 import com.sk89q.worldedit.function.mask.BlockCategoryMask
@@ -37,7 +36,6 @@ class SignSearch : BaseCommand() {
     @Syntax("[regex]")
     fun search(
         player: WEPlayer,
-        session: LocalSession,
         selection: Region,
         arg: String,
     ) {
