@@ -9,12 +9,16 @@ import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.regions.selector.limit.PermissiveSelectorLimits
 import java.util.*
 
+fun PluginScope.createSelectionStack() {
+    commandManager.registerCommand(SelectionStack())
+}
+
 private typealias Stack = MutableList<Pair<BlockVector3, BlockVector3>>
 
 @CommandAlias("/selstack")
 @Description("Temporarily save your selection onto a stack")
 @CommandPermission("redstonetools.selstack")
-class SelectionStack : BaseCommand() {
+private class SelectionStack : BaseCommand() {
     private val stacks = mutableMapOf<UUID, Stack>()
 
     private fun stackOf(player: WEPlayer): Stack = stacks.computeIfAbsent(player.uniqueId) { mutableListOf() }

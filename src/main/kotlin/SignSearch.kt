@@ -1,8 +1,6 @@
 package redstonetools
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.BukkitCommandCompletionContext
-import co.aikar.commands.CommandCompletions
 import co.aikar.commands.annotation.*
 import com.google.re2j.Pattern
 import com.google.re2j.PatternSyntaxException
@@ -23,15 +21,22 @@ import com.sk89q.worldedit.world.block.BlockCategories
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
 import org.bukkit.entity.Player
 import java.util.*
-import kotlin.math.ceil
 import net.kyori.adventure.text.TextComponent as ATextComponent
 
-val searchResults = HashMap<UUID, MutableList<LocationContainer>>()
+fun PluginScope.createSignSearch() {
+    val searchResults = HashMap<UUID, List<LocationContainer>>()
+    commandManager.apply {
+        commandCompletions.registerCompletion(COMPLETION_SEARCH_PAGE, PageCompletionHandler(searchResults))
+        registerCommand(SignSearch(searchResults))
+    }
+}
+
+private const val COMPLETION_SEARCH_PAGE = "search_page"
 
 @CommandAlias("/signsearch|/ss")
 @Description("Search for text of signs within a selection using a regular expression")
 @CommandPermission("redstonetools.signsearch")
-class SignSearch : BaseCommand() {
+private class SignSearch(private val searchResults: MutableMap<UUID, List<LocationContainer>>) : BaseCommand() {
     @Default
     @Syntax("[regex]")
     fun search(
@@ -73,7 +78,7 @@ class SignSearch : BaseCommand() {
     }
 
     @Subcommand("-p")
-    @CommandCompletion("@search_page")
+    @CommandCompletion("@$COMPLETION_SEARCH_PAGE")
     @Syntax("[number]")
     fun page(
         player: Player,
@@ -135,13 +140,4 @@ private fun String.findFirstMatch(pattern: Pattern): Match? {
     val matcher = pattern.matcher(this)
     if (!matcher.find()) return null
     return Match(matcher.group(), matcher.start(), matcher.end())
-}
-
-class SearchPageCompletionHandler :
-    CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
-    override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> {
-        val player = context.sender as Player
-        val locations = searchResults[player.uniqueId] ?: return emptyList()
-        return (1..ceil(locations.size / 7f).toInt()).map { it.toString() }.toList()
-    }
 }

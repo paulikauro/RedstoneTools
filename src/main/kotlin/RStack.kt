@@ -17,13 +17,14 @@ import com.sk89q.worldedit.util.Direction
 import java.lang.Integer.parseInt
 import kotlin.math.abs
 
-private val BlockVector3.isUpright: Boolean
-    get() = x == 0 && z == 0
+fun PluginScope.createRStack(worldEdit: WorldEdit) {
+    commandManager.registerCommand(RStack(worldEdit))
+}
 
 @CommandAlias("/rstack|/rs")
 @Description("Redstone stacking command")
 @CommandPermission("redstonetools.rstack")
-class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
+private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
     @Default
     @Syntax("[-e] [direction] [count] [spacing]")
     fun rstack(
@@ -144,3 +145,6 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         // check length, because 'd' and 'u' alone are not diagonal directions (they're just up or down)
         direction.length > 1 && direction.last().lowercaseChar() == upOrDown
 }
+
+private val BlockVector3.isUpright: Boolean
+    get() = x == 0 && z == 0

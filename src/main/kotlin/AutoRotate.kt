@@ -12,10 +12,16 @@ import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import java.util.*
 
+fun PluginScope.createAutoRotate() {
+    val autorotate = AutoRotate()
+    commandManager.registerCommand(autorotate)
+    pluginManager.registerEvents(autorotate, plugin)
+}
+
 @CommandAlias("autorotate|ar")
 @Description("Automatically rotates specific redstone components when placed.")
 @CommandPermission("redstonetools.autorotate")
-class AutoRotate : BaseCommand(), Listener {
+private class AutoRotate : BaseCommand(), Listener {
     private val enabledPlayers = mutableSetOf<UUID>()
     private val rotatable = setOf(
         Material.REPEATER, Material.COMPARATOR, Material.OBSERVER, Material.PISTON, Material.STICKY_PISTON,

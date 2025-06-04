@@ -1,8 +1,6 @@
 package redstonetools
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.BukkitCommandCompletionContext
-import co.aikar.commands.CommandCompletions
 import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.function.RegionFunction
 import com.sk89q.worldedit.function.RegionMaskingFilter
@@ -12,16 +10,22 @@ import com.sk89q.worldedit.function.visitor.RegionVisitor
 import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.util.formatting.component.InvalidComponentException
 import com.sk89q.worldedit.util.formatting.text.TextComponent
-import org.bukkit.entity.Player
 import java.util.*
-import kotlin.math.ceil
 
-val findResults = HashMap<UUID, MutableList<LocationContainer>>()
+fun PluginScope.createFind() {
+    val findResults = HashMap<UUID, List<LocationContainer>>()
+    commandManager.apply {
+        commandCompletions.registerCompletion(COMPLETION_FIND_PAGE, PageCompletionHandler(findResults))
+        registerCommand(Find(findResults))
+    }
+}
+
+private const val COMPLETION_FIND_PAGE = "find_page"
 
 @CommandAlias("/find")
 @Description("Find blocks matching a mask in your selection")
 @CommandPermission("redstonetools.find")
-class Find : BaseCommand() {
+private class Find(private val findResults: MutableMap<UUID, List<LocationContainer>>) : BaseCommand() {
     @Default
     @Syntax("[mask]")
     fun find(
@@ -49,7 +53,7 @@ class Find : BaseCommand() {
     }
 
     @Subcommand("-p")
-    @CommandCompletion("@find_page")
+    @CommandCompletion("@$COMPLETION_FIND_PAGE")
     @Syntax("[number]")
     fun page(
         player: WEPlayer,
@@ -63,14 +67,5 @@ class Find : BaseCommand() {
             throw RedstoneToolsException("Invalid page number.")
         }
         player.print(component)
-    }
-}
-
-class FindPageCompletionHandler :
-    CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
-    override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> {
-        val player = context.sender as Player
-        val locations = findResults[player.uniqueId] ?: return emptyList()
-        return (1..ceil(locations.size / 7f).toInt()).map { it.toString() }.toList()
     }
 }

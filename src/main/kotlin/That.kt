@@ -15,12 +15,15 @@ import java.util.BitSet
 import java.util.concurrent.CompletableFuture
 import kotlin.collections.ArrayDeque
 
-
 data class ThatConfig(
     val sizeLimit: Int = 200,
     val maxTimePerTickMs: Int = 30,
     val maxTicks: Int = 5,
 )
+
+fun PluginScope.createThat(config: ThatConfig, worldEdit: WorldEdit) {
+    commandManager.registerCommand(That(config, worldEdit, plugin))
+}
 
 // unsure if this needs to be configurable, but probably doesn't matter
 private const val ITERATIONS_PER_BURST = 2000
@@ -28,13 +31,13 @@ private const val ITERATIONS_PER_BURST = 2000
 @CommandAlias("/that|/hsel")
 @Description("Select the build you're looking at")
 @CommandPermission("redstonetools.that")
-class That(private val config: ThatConfig, private val worldEdit: WorldEdit, private val plugin: Plugin) :
+private class That(private val config: ThatConfig, private val worldEdit: WorldEdit, private val plugin: Plugin) :
     BaseCommand() {
     private val sizeLimit = config.sizeLimit
     private val maxNsPerTick = config.maxTimePerTickMs * 1_000_000
 
     @Default
-    @CommandCompletion("@we_mask")
+    @CommandCompletion("@$COMPLETION_MASK")
     fun that(
         player: WEPlayer,
         localSession: LocalSession,

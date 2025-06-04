@@ -13,13 +13,17 @@ import net.kyori.adventure.text.format.NamedTextColor.*
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.event.Listener
-import org.bukkit.plugin.java.JavaPlugin
+import org.bukkit.plugin.Plugin
 import org.bukkit.scoreboard.Criteria
 import org.bukkit.scoreboard.DisplaySlot
 import org.bukkit.scoreboard.Objective
 import kotlin.random.Random
 
-class WorldEditHelper(plugin: JavaPlugin, private val worldEdit: WorldEdit) : Listener {
+fun PluginScope.createWEHelper(worldEdit: WorldEdit) {
+    pluginManager.registerEvents(WorldEditHelper(plugin, worldEdit), plugin)
+}
+
+private class WorldEditHelper(plugin: Plugin, private val worldEdit: WorldEdit) : Listener {
     init {
         Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, this::checkPlayers, 0, 20)
         worldEdit.eventBus.register(this)

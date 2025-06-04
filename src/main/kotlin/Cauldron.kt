@@ -17,10 +17,16 @@ import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.EquipmentSlot
 import java.util.*
 
+fun PluginScope.createCauldron() {
+    val cauldron = Cauldron()
+    commandManager.registerCommand(cauldron)
+    pluginManager.registerEvents(cauldron, plugin)
+}
+
 @CommandAlias("cauldron")
 @Description("Toggles cauldron water level adjustment mode.")
 @CommandPermission("redstonetools.cauldron")
-class Cauldron : BaseCommand(), Listener {
+private class Cauldron : BaseCommand(), Listener {
     private val enabledPlayers = mutableSetOf<UUID>()
 
     @Default

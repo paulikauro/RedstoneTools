@@ -22,10 +22,22 @@ import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.plugin.Plugin
 import java.util.*
 
+fun PluginScope.createPins() {
+    val pins = PinCommand(plugin)
+    commandManager.apply {
+        commandCompletions.registerCompletion(COMPLETION_PINS, pins.CompletionHandler())
+        registerThing(PinState)
+        registerCommand(pins)
+    }
+    pluginManager.registerEvents(pins.listener, plugin)
+}
+
+private const val COMPLETION_PINS = "pins"
+
 @CommandAlias("pin")
 @Description("Pin your favorite redstones")
 @CommandPermission("redstonetools.pin")
-class PinCommand(private val plugin: Plugin) : BaseCommand() {
+private class PinCommand(private val plugin: Plugin) : BaseCommand() {
     // currently only input pin
     data class Pin(val location: Location)
 
@@ -124,7 +136,7 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @Subcommand("remove")
     @Description("Remove a pin")
     @CommandPermission("redstonetools.pin.remove")
-    @CommandCompletion("@pins")
+    @CommandCompletion("@$COMPLETION_PINS")
     fun remove(player: Player, name: String) {
         val removed = pins.remove(player.uniqueId to name) != null
         val message = if (removed) "Pin $name removed" else "No pin named $name"
@@ -134,7 +146,7 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @Subcommand("turn")
     @Description("Change pin state")
     @CommandPermission("redstonetools.pin.turn")
-    @CommandCompletion("@pin_state @pins")
+    @CommandCompletion("@pin_state @$COMPLETION_PINS")
     fun turn(player: Player, newState: PinState, name: String) {
         val pin = pins[player.uniqueId to name] ?: run {
             player.info("No pin named $name")
@@ -149,7 +161,7 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @Subcommand("pulse")
     @Description("Pulse a pin")
     @CommandPermission("redstonetools.pin.pulse")
-    @CommandCompletion("@pin_state @pins @range:1-100")
+    @CommandCompletion("@pin_state @$COMPLETION_PINS @range:1-100")
     fun pulse(player: Player, state: PinState, name: String, time: Int) {
         if (time < 1 || time > 100) {
             player.info("Time must be between 1 and 100 ticks (inclusive)!")
@@ -180,7 +192,7 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @Subcommand("toggle")
     @Description("Toggle pin state")
     @CommandPermission("redstonetools.pin.toggle")
-    @CommandCompletion("@pins")
+    @CommandCompletion("@$COMPLETION_PINS")
     fun toggle(player: Player, name: String) {
         val pin = pins[player.uniqueId to name] ?: run {
             player.info("No pin named $name")
@@ -224,5 +236,27 @@ private class BlockListener : Listener {
         val handler = players.remove(event.player.uniqueId) ?: return
         event.isCancelled = true
         handler(event)
+    }
+}
+
+private class PinState(val value: Boolean) {
+    override fun toString(): String = when (value) {
+        false -> "off"
+        true -> "on"
+    }
+
+    fun not(): PinState = PinState(!value)
+
+    companion object : Thing<PinState> {
+        override val readableName = "Pin state"
+
+        override fun of(arg: String): PinState? = when (arg) {
+            "on" -> PinState(true)
+            "off" -> PinState(false)
+            else -> null
+        }
+
+        override val values = listOf("on", "off")
+        override val valueClass = PinState::class.java
     }
 }

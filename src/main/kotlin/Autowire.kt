@@ -15,10 +15,16 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.plugin.PluginManager
 import java.util.*
 
+fun PluginScope.createAutowire() {
+    val autowire = Autowire(pluginManager)
+    commandManager.registerCommand(autowire)
+    pluginManager.registerEvents(autowire, plugin)
+}
+
 @CommandAlias("autowire|aw")
 @Description("Get that there redstone automagically!")
 @CommandPermission("redstonetools.autowire")
-class Autowire(
+private class Autowire(
     private val pluginManager: PluginManager,
 ) : BaseCommand(), Listener {
     private val autos = mutableSetOf<UUID>()

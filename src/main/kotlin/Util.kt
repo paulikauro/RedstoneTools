@@ -1,13 +1,20 @@
 package redstonetools
 
+import co.aikar.commands.*
 import com.sk89q.worldedit.IncompleteRegionException
 import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.bukkit.BukkitAdapter
+import com.sk89q.worldedit.extension.factory.MaskFactory
 import com.sk89q.worldedit.extension.input.ParserContext
 import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.Region
+import com.sk89q.worldedit.util.formatting.component.PaginationBox
+import com.sk89q.worldedit.util.formatting.text.TextComponent
+import com.sk89q.worldedit.util.formatting.text.event.ClickEvent
+import com.sk89q.worldedit.util.formatting.text.event.HoverEvent
+import com.sk89q.worldedit.util.formatting.text.format.TextColor
 import de.tr7zw.nbtapi.NBT
 import de.tr7zw.nbtapi.iface.ReadWriteItemNBT
 import net.kyori.adventure.audience.Audience
@@ -20,6 +27,9 @@ import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
+import org.bukkit.plugin.Plugin
+import java.util.*
+import kotlin.math.ceil
 
 operator fun String.get(s: ComponentBuilderApplicable): Component =
     text().content(this).applicableApply(s).build()
@@ -81,3 +91,100 @@ const val MAKE_SELECTION_FIRST = "Make a region selection first."
 
 fun LocalSession.requireSelection(): Region =
     getSelectionOrNull() ?: throw RedstoneToolsException(MAKE_SELECTION_FIRST)
+
+const val COMPLETION_MASK = "we_mask"
+
+fun PluginScope.registerWECommandContexts(worldEdit: WorldEdit) = commandManager.apply {
+    commandCompletions.registerCompletion(COMPLETION_MASK, MaskCompletionHandler(worldEdit))
+    commandCompletions.setDefaultCompletion(COMPLETION_MASK, Mask::class.java)
+    commandContexts.registerContext(Mask::class.java) { context ->
+        val player = context.player?.we()
+        val localSession = player?.let(worldEdit.sessionManager::get)
+        parseMaskOrThrow(context.popFirstArg(), worldEdit, localSession, player)
+    }
+
+    fun BukkitCommandExecutionContext.requireWEPlayer(): WEPlayer =
+        player?.we() ?: throw ConditionFailedException("This can only be run by a player")
+
+    fun BukkitCommandExecutionContext.requireWESession(): LocalSession =
+        worldEdit.sessionManager.get(requireWEPlayer())
+
+    commandContexts.registerIssuerOnlyContext(WEPlayer::class.java) { context ->
+        context.requireWEPlayer()
+    }
+    commandContexts.registerIssuerOnlyContext(LocalSession::class.java) { context ->
+        context.requireWESession()
+    }
+    commandContexts.registerIssuerOnlyContext(Region::class.java) { context ->
+        context.requireWESession().requireSelection()
+    }
+}
+
+private class MaskCompletionHandler(worldEdit: WorldEdit) :
+    CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
+    private val maskFactory = MaskFactory(worldEdit)
+    override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> =
+        maskFactory.getSuggestions(context.input)
+}
+
+data class LocationContainer(val location: BlockVector3, val match: TextComponent)
+
+class LocationsPaginationBox(private val locations: List<LocationContainer>, title: String, command: String) :
+    PaginationBox(title, command) {
+
+    init {
+        setComponentsPerPage(7)
+    }
+
+    override fun getComponent(number: Int): com.sk89q.worldedit.util.formatting.text.Component {
+        if (number > locations.size) throw IllegalArgumentException("Invalid location index.")
+        return TextComponent.of("${number + 1}: ")
+            .append(locations[number].match)
+            .color(TextColor.LIGHT_PURPLE)
+            .clickEvent(locations[number].location.run { ClickEvent.runCommand("/tp $x $y $z") })
+            .hoverEvent(HoverEvent.showText(TextComponent.of("Click to teleport")))
+    }
+
+    override fun getComponentsSize(): Int = locations.size
+
+    override fun create(page: Int): com.sk89q.worldedit.util.formatting.text.Component {
+        super.getContents()
+            .append(TextComponent.of("Total Results: ${locations.size}").color(TextColor.GRAY))
+            .append(TextComponent.newline())
+        return super.create(page)
+    }
+}
+
+class PageCompletionHandler(private val results: Map<UUID, List<LocationContainer>>) :
+    CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
+    override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> {
+        val player = context.player ?: return emptyList()
+        val locations = results[player.uniqueId] ?: return emptyList()
+        return (1..ceil(locations.size / 7f).toInt()).map { it.toString() }
+    }
+}
+
+class PluginScope(val plugin: Plugin, val commandManager: PaperCommandManager) {
+    val pluginManager get() = plugin.server.pluginManager
+}
+
+class RedstoneToolsException(message: String) : Exception(message)
+
+interface Thing<T> {
+    val readableName: String
+    fun of(arg: String): T?
+    val values: Collection<String>
+    val valueClass: Class<T>
+}
+
+fun <T> PaperCommandManager.registerThing(thing: Thing<T>) {
+    val name = thing.readableName.replace(" ", "_").lowercase()
+    val errorMessage = "${thing.readableName} must be one of ${thing.values}"
+    commandContexts.registerContext(thing.valueClass) { context ->
+        thing.of(context.popFirstArg()) ?: throw InvalidCommandArgument(errorMessage)
+    }
+    commandCompletions.apply {
+        registerStaticCompletion(name, thing.values)
+        setDefaultCompletion(name, thing.valueClass)
+    }
+}

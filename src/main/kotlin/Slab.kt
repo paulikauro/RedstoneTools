@@ -1,8 +1,6 @@
 package redstonetools
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.BukkitCommandCompletionContext
-import co.aikar.commands.CommandCompletions
 import co.aikar.commands.annotation.*
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
@@ -14,12 +12,27 @@ import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.BlockDataMeta
 
+fun PluginScope.createSlab() {
+    // TODO: consider using BlockCategories.SLABS
+    val slabCompletions = Material.entries
+        .filter { it.isBlock && it.createBlockData() is Slab }
+        .map { it.toString().lowercase() }
+    val slab = Slab()
+    commandManager.apply {
+        commandCompletions.registerStaticCompletion(COMPLETION_SLABS, slabCompletions)
+        registerCommand(slab)
+    }
+    pluginManager.registerEvents(slab, plugin)
+}
+
+private const val COMPLETION_SLABS = "slabs"
+
 @CommandAlias("slab")
 @Description("Slab fetching command")
 @CommandPermission("redstonetools.slab")
-class Slab : BaseCommand() {
+private class Slab : BaseCommand(), Listener {
     @Default
-    @CommandCompletion("@slabs")
+    @CommandCompletion("@$COMPLETION_SLABS")
     fun slab(
         player: Player,
         @Optional
@@ -53,9 +66,7 @@ class Slab : BaseCommand() {
         }
         return itemStack.modifyNBT { addFakeEnchant() }
     }
-}
 
-class SlabListener : Listener {
     @EventHandler(ignoreCancelled = true)
     fun onSlabPlace(event: BlockPlaceEvent) {
         val slabData = event.blockPlaced.blockData as? Slab ?: return
@@ -69,11 +80,4 @@ class SlabListener : Listener {
         slabLocation.block.type = event.blockPlaced.type
         slabLocation.block.blockData = event.blockPlaced.blockData
     }
-}
-
-class SlabCompletionHandler :
-    CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
-    override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> = Material.entries
-        .filter { it.isBlock && it.createBlockData() is Slab }
-        .map { it.toString().lowercase() }
 }

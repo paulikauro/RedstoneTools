@@ -11,12 +11,19 @@ import org.bukkit.inventory.meta.ItemMeta
 import kotlin.math.ceil
 import kotlin.math.min
 
+fun PluginScope.createContainer() {
+    commandManager.apply {
+        registerThing(SignalStrength)
+        registerThing(SignalContainer)
+        registerCommand(Container())
+    }
+}
+
 @CommandAlias("container")
 @Description("Container fetching command")
 @CommandPermission("redstonetools.container")
-class Container : BaseCommand() {
+private class Container : BaseCommand() {
     @Default
-    @CommandCompletion("@container @signal_strength")
     @Syntax("[type] [power]")
     fun container(
         player: Player,
@@ -99,5 +106,43 @@ class Container : BaseCommand() {
         if (power == 0) return 0
         if (power == 15) return slots * 64
         return ceil((32 * slots * power) / 7.toFloat() - 1).toInt()
+    }
+}
+
+private class SignalStrength(val value: Int, val originalName: String) {
+    companion object : Thing<SignalStrength> {
+        override fun of(arg: String): SignalStrength? = when (arg.lowercase()) {
+            in hexValues -> SignalStrength(arg.toInt(16), arg)
+            in intValues -> SignalStrength(arg.toInt(), arg)
+            else -> null
+        }
+
+        private val intValues = (0..15).map(Int::toString)
+        private val hexValues = ('a'..'f').map(Char::toString)
+        override val values = intValues + hexValues
+        override val readableName = "Signal strength"
+        override val valueClass = SignalStrength::class.java
+    }
+}
+
+private class SignalContainer(val material: Material) {
+    companion object : Thing<SignalContainer> {
+        // Not a map [yet] cuz we want shortcuts
+        // maybe possible to just check the first letter (like WorldEdit does with directions)
+        // depending on what other containers we want to support
+        private val materials = listOf(
+            "furnace" to Material.FURNACE,
+            "chest" to Material.CHEST,
+            "barrel" to Material.BARREL,
+            "hopper" to Material.HOPPER,
+            "jukebox" to Material.JUKEBOX,
+        )
+        override val values = materials.map { it.first }.sorted()
+        override fun of(arg: String): SignalContainer? = materials
+            .firstOrNull { (name, _) -> name.startsWith(arg) }
+            ?.let { (_, material) -> SignalContainer(material) }
+
+        override val readableName = "Container"
+        override val valueClass = SignalContainer::class.java
     }
 }
