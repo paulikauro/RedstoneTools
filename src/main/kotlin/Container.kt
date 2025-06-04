@@ -2,8 +2,6 @@ package redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
-import de.tr7zw.nbtapi.NBT
-import de.tr7zw.nbtapi.NBTItem
 import de.tr7zw.nbtapi.iface.ReadWriteItemNBT
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
@@ -24,7 +22,7 @@ class Container : BaseCommand() {
     fun container(
         player: Player,
         container: SignalContainer,
-        power: SignalStrength
+        power: SignalStrength,
     ) {
         player.inventory.addItem(container.itemWithPower(power))
     }

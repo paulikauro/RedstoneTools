@@ -1,8 +1,11 @@
 package redstonetools
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.annotation.*
-import net.kyori.adventure.text.Component
+import co.aikar.commands.annotation.CommandAlias
+import co.aikar.commands.annotation.CommandPermission
+import co.aikar.commands.annotation.Default
+import co.aikar.commands.annotation.Description
+import net.kyori.adventure.text.Component.text
 import org.bukkit.Material
 import org.bukkit.block.data.Directional
 import org.bukkit.entity.Player
@@ -24,7 +27,7 @@ class AutoRotate : BaseCommand(), Listener {
     @Default
     fun toggleAutoRotate(player: Player) {
         player.sendActionBar(
-            Component.text(
+            text(
                 if (enabledPlayers.remove(player.uniqueId)) {
                     "Auto Rotate Disabled"
                 } else {

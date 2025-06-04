@@ -4,30 +4,28 @@ import co.aikar.commands.BaseCommand
 import co.aikar.commands.BukkitCommandCompletionContext
 import co.aikar.commands.CommandCompletions
 import co.aikar.commands.annotation.*
+import com.google.re2j.Pattern
+import com.google.re2j.PatternSyntaxException
+import com.sk89q.jnbt.CompoundTag
+import com.sk89q.jnbt.ListTag
 import com.sk89q.jnbt.StringTag
-import com.sk89q.worldedit.WorldEdit
+import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.function.RegionFunction
 import com.sk89q.worldedit.function.RegionMaskingFilter
 import com.sk89q.worldedit.function.mask.BlockCategoryMask
 import com.sk89q.worldedit.function.operation.Operations
 import com.sk89q.worldedit.function.visitor.RegionVisitor
-import com.sk89q.worldedit.world.block.BaseBlock
-import com.sk89q.worldedit.world.block.BlockCategories
-import org.bukkit.entity.Player
-import java.util.*
-import kotlin.collections.HashMap
-import kotlin.math.ceil
-import com.google.re2j.Pattern
-import com.google.re2j.PatternSyntaxException
-import com.sk89q.jnbt.CompoundTag
-import com.sk89q.jnbt.ListTag
-import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.util.formatting.component.InvalidComponentException
 import com.sk89q.worldedit.util.formatting.text.TextComponent
 import com.sk89q.worldedit.util.formatting.text.format.TextColor
+import com.sk89q.worldedit.world.block.BaseBlock
+import com.sk89q.worldedit.world.block.BlockCategories
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
+import org.bukkit.entity.Player
+import java.util.*
+import kotlin.math.ceil
 import net.kyori.adventure.text.TextComponent as ATextComponent
 
 val searchResults = HashMap<UUID, MutableList<LocationContainer>>()
@@ -35,14 +33,14 @@ val searchResults = HashMap<UUID, MutableList<LocationContainer>>()
 @CommandAlias("/signsearch|/ss")
 @Description("Search for text of signs within a selection using a regular expression")
 @CommandPermission("redstonetools.signsearch")
-class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
+class SignSearch : BaseCommand() {
     @Default
     @Syntax("[expression]")
     fun search(
         player: WEPlayer,
         session: LocalSession,
         selection: Region,
-        arg: String
+        arg: String,
     ) {
         val pattern = try {
             Pattern.compile(arg)
@@ -67,7 +65,7 @@ class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
             page(BukkitAdapter.adapt(player), 1)
         } else {
             searchResults.remove(player.uniqueId)
-            player.printInfo(TextComponent.of("No results found."))
+            player.info("No results found.")
         }
     }
 
@@ -76,13 +74,13 @@ class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
     @Syntax("[number]")
     fun page(
         player: Player,
-        page: Int
+        page: Int,
     ) {
         val results = searchResults[player.uniqueId] ?: throw RedstoneToolsException("Use //signsearch to get results")
         val paginationBox = LocationsPaginationBox(results, "Search Results", "//signsearch -p %page%")
         val component = try {
             paginationBox.create(page)
-        } catch (e: InvalidComponentException) {
+        } catch (_: InvalidComponentException) {
             throw RedstoneToolsException("Invalid page number.")
         }
         BukkitAdapter.adapt(player).print(component)

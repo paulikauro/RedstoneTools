@@ -1,13 +1,14 @@
 package redstonetools
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.annotation.*
+import co.aikar.commands.annotation.CommandAlias
+import co.aikar.commands.annotation.CommandPermission
+import co.aikar.commands.annotation.Default
+import co.aikar.commands.annotation.Description
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.function.mask.ExistingBlockMask
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.Region
-import com.sk89q.worldedit.util.formatting.text.TextComponent
-import net.kyori.adventure.text.Component
 import org.bukkit.Bukkit
 import org.bukkit.block.Block
 import org.bukkit.event.EventHandler
@@ -40,7 +41,7 @@ class LiveStack(private val plugin: Plugin, private val worldEdit: WorldEdit) : 
             val blocks = selection.filterNot(mask::test)
             gonnaLiveStack[player.uniqueId] = State.SelectingRoot(blocks)
             "Click to select root block"
-        }.let { player.printInfo(TextComponent.of(it)) }
+        }.let { player.info(it) }
     }
 
     @EventHandler
@@ -58,11 +59,13 @@ class LiveStack(private val plugin: Plugin, private val worldEdit: WorldEdit) : 
                     displacements = state.blocks.map { it.subtract(root) }.filter { it != BlockVector3.ZERO }
                 )
                 event.isCancelled = true
-                event.player.sendMessage(Component.text("root block selected"))
+                event.player.info("Root block selected")
             }
+
             is State.Enabled -> {
                 doLiveStack(event.block, state.displacements)
             }
+
             else -> Unit
         }
     }

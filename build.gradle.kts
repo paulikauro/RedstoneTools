@@ -29,6 +29,7 @@ dependencies {
     implementation("com.google.re2j:re2j:1.6")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.0")
+    implementation("net.kyori:adventure-extra-kotlin:4.16.0")
 
     compileOnly("de.tr7zw:item-nbt-api-plugin:2.14.1")
     compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")

@@ -5,7 +5,7 @@ import co.aikar.commands.annotation.CommandAlias
 import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Default
 import co.aikar.commands.annotation.Description
-import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.Component.text
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Material
@@ -33,7 +33,7 @@ class Autowire(
     @Default
     fun toggleAutowire(player: Player) {
         player.sendActionBar(
-            Component.text(
+            text(
                 if (autos.remove(player.uniqueId)) {
                     "Auto wire Disabled"
                 } else {
