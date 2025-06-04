@@ -16,8 +16,11 @@ import com.sk89q.worldedit.util.formatting.text.TextComponent
 import com.sk89q.worldedit.util.formatting.text.event.ClickEvent
 import com.sk89q.worldedit.util.formatting.text.event.HoverEvent
 import com.sk89q.worldedit.util.formatting.text.format.TextColor
-import org.bukkit.ChatColor
+import net.kyori.adventure.extra.kotlin.plus
+import net.kyori.adventure.text.format.NamedTextColor.DARK_GRAY
+import net.kyori.adventure.text.format.NamedTextColor.GRAY
 import org.bukkit.Material
+import org.bukkit.command.CommandSender
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.logging.Level
 
@@ -27,11 +30,12 @@ class RedstoneTools : JavaPlugin() {
         registeredCommand: RegisteredCommand<*>,
         sender: CommandIssuer,
         args: List<String>,
-        throwable: Throwable
+        throwable: Throwable,
     ): Boolean = when (throwable) {
         is RedstoneToolsException, is WorldEditException -> {
             val message = throwable.message ?: "Something went wrong."
-            sender.sendMessage("${ChatColor.DARK_GRAY}[${ChatColor.GRAY}RedstoneTools${ChatColor.DARK_GRAY}]${ChatColor.GRAY} $message")
+            sender.getIssuer<CommandSender>()
+                .sendMessage("["[DARK_GRAY] + "RedstoneTools"[GRAY] + "] "[DARK_GRAY] + message[GRAY])
             true
         }
 
@@ -60,7 +64,7 @@ class RedstoneTools : JavaPlugin() {
             return
         }
         val worldEdit = wePlugin.worldEdit
-//        val liveStack = LiveStack(this, worldEdit)
+//        val liveStack = LiveStack(this)
         val autowire = Autowire(server.pluginManager)
         val pins = PinCommand(this)
         val autoRotate = AutoRotate()
@@ -76,6 +80,7 @@ class RedstoneTools : JavaPlugin() {
             pins.listener,
         ).forEach { server.pluginManager.registerEvents(it, this) }
         PaperCommandManager(this).apply {
+            enableUnstableAPI("help")
             arrayOf(
                 "slabs" to SlabCompletionHandler(),
                 "we_mask" to MaskCompletionHandler(worldEdit),
@@ -85,13 +90,13 @@ class RedstoneTools : JavaPlugin() {
             ).forEach { (id, handler) -> commandCompletions.registerCompletion(id, handler) }
             commandCompletions.setDefaultCompletion("we_mask", Mask::class.java)
             commandContexts.registerContext(Mask::class.java) { context ->
-                val player = context.player?.let(BukkitAdapter::adapt)
+                val player = context.player?.we()
                 val localSession = player?.let(worldEdit.sessionManager::get)
                 parseMaskOrThrow(context.popFirstArg(), worldEdit, localSession, player)
             }
-            fun BukkitCommandExecutionContext.requireWEPlayer(): com.sk89q.worldedit.entity.Player =
-                player?.let(BukkitAdapter::adapt) ?: throw ConditionFailedException("This can only be run by a player")
-            commandContexts.registerIssuerOnlyContext(com.sk89q.worldedit.entity.Player::class.java) { context ->
+            fun BukkitCommandExecutionContext.requireWEPlayer(): WEPlayer =
+                player?.we() ?: throw ConditionFailedException("This can only be run by a player")
+            commandContexts.registerIssuerOnlyContext(WEPlayer::class.java) { context ->
                 context.requireWEPlayer()
             }
             commandContexts.registerIssuerOnlyContext(LocalSession::class.java) { context ->
@@ -108,7 +113,7 @@ class RedstoneTools : JavaPlugin() {
             setDefaultExceptionHandler(::handleCommandException, false)
             arrayOf(
                 RStack(worldEdit),
-                Find(worldEdit),
+                Find(),
                 That(thatConfig, worldEdit, this@RedstoneTools),
                 SignSearch(),
                 Container(),
@@ -118,7 +123,7 @@ class RedstoneTools : JavaPlugin() {
                 cauldron,
 //                liveStack,
                 pins,
-                SelectionStack(worldEdit),
+                SelectionStack(),
             ).forEach(::registerCommand)
         }
     }
@@ -216,8 +221,8 @@ class MaskCompletionHandler(private val worldEdit: WorldEdit) :
 
 data class LocationContainer(val location: BlockVector3, val match: TextComponent)
 
-class LocationsPaginationBox(private val locations: MutableList<LocationContainer>, title: String, command: String) :
-    PaginationBox("${ChatColor.LIGHT_PURPLE}$title", command) {
+class LocationsPaginationBox(private val locations: List<LocationContainer>, title: String, command: String) :
+    PaginationBox(title, command) {
 
     init {
         setComponentsPerPage(7)

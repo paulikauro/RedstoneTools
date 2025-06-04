@@ -16,14 +16,13 @@ import kotlin.math.min
 @Description("Container fetching command")
 @CommandPermission("redstonetools.container")
 class Container : BaseCommand() {
-
     @Default
     @CommandCompletion("@container @signal_strength")
     @Syntax("[type] [power]")
     fun container(
         player: Player,
         container: SignalContainer,
-        power: SignalStrength
+        power: SignalStrength,
     ) {
         player.inventory.addItem(container.itemWithPower(power))
     }

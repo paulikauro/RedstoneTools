@@ -8,7 +8,6 @@ import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.CuboidRegion
 import com.sk89q.worldedit.regions.selector.CuboidRegionSelector
-import com.sk89q.worldedit.util.formatting.text.TextComponent
 import org.bukkit.Bukkit
 import org.bukkit.plugin.Plugin
 import java.lang.System.nanoTime
@@ -42,7 +41,7 @@ class That(private val config: ThatConfig, private val worldEdit: WorldEdit, pri
         args: Array<String>,
     ) {
         // very crappy argument parsing
-        // plan is to replace ACF at some point so not going to waste a lot of effort in this
+        // the plan is to replace ACF at some point so not going to waste a lot of effort on this
         var offsets = Offsets.DEFAULT
         var maskStr = "#existing"
         var inQuotes = false
@@ -66,9 +65,8 @@ class That(private val config: ThatConfig, private val worldEdit: WorldEdit, pri
         }
         if (inQuotes) throw RedstoneToolsException("Unterminated quote")
         val mask = parseMaskOrThrow(maskStr, worldEdit, localSession, player)
-        // NOTE: this does not use the mask!
-        val target = player.getBlockTrace(config.sizeLimit)?.toVector()?.toBlockPoint() ?: run {
-            player.printError(TextComponent.of("No build in sight!"))
+        val target = player.getBlockTrace(config.sizeLimit, false, mask)?.toVector()?.toBlockPoint() ?: run {
+            player.err("No build in sight!")
             return
         }
 
@@ -79,11 +77,11 @@ class That(private val config: ThatConfig, private val worldEdit: WorldEdit, pri
                     val session = worldEdit.sessionManager.get(player)
                     session.setRegionSelector(player.world, sel)
                     sel.explainRegionAdjust(player, session)
-                    player.printInfo(TextComponent.of("Build selected."))
+                    player.info("Build selected.")
                 }
 
                 is ExpandResult.LimitExceeded ->
-                    player.printError(TextComponent.of("${result.kind} limit exceeded. Your selection was not changed."))
+                    player.err("${result.kind} limit exceeded. Your selection was not changed.")
             }
         }
     }

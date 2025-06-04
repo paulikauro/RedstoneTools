@@ -3,6 +3,7 @@ package redstonetools
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.BukkitCommandCompletionContext
 import co.aikar.commands.CommandCompletions
+import co.aikar.commands.CommandHelp
 import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.util.SideEffectSet
@@ -27,6 +28,7 @@ import java.util.*
 class PinCommand(private val plugin: Plugin) : BaseCommand() {
     // currently only input pin
     data class Pin(val location: Location)
+
     private val pins = mutableMapOf<Pair<UUID, String>, Pin>()
 
     private val Switch.attachedBlockFace: BlockFace
@@ -40,9 +42,11 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
         data object PinDestroyed : PinStateResult
         data class OK(val newState: PinState) : PinStateResult
     }
+
     private fun Pin.setState(
         newState: PinState,
     ): PinStateResult = modifyState { newState }
+
     private fun Pin.modifyState(
         f: (PinState) -> PinState,
     ): PinStateResult {
@@ -56,7 +60,11 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
         val weWorld = BukkitAdapter.adapt(block.world)
         val effects = SideEffectSet.defaults()
         weWorld.applySideEffects(location.toBlockVector3(), BukkitAdapter.adapt(lever), effects)
-        weWorld.applySideEffects(attachedTo.location.toBlockVector3(), BukkitAdapter.adapt(attachedTo.blockData), effects)
+        weWorld.applySideEffects(
+            attachedTo.location.toBlockVector3(),
+            BukkitAdapter.adapt(attachedTo.blockData),
+            effects
+        )
         return PinStateResult.OK(newState)
     }
 
@@ -71,10 +79,9 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
         }
     }
 
-    @Default
-    @CatchUnknown
-    fun help(player: Player) {
-        player.sendMessage("Unknown subcommand! Use tab completion or refer to #announcements message")
+    @HelpCommand
+    fun help(help: CommandHelp) {
+        help.showHelp()
     }
 
     @Subcommand("list")
@@ -83,10 +90,10 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
     fun list(player: Player) {
         player.sendMessage("Your pins:")
         pins
-            .filterKeys { (uuid, name) -> uuid == player.uniqueId }
+            .filterKeys { (uuid, _) -> uuid == player.uniqueId }
             // TODO: click to tp
             .map { (key, value) -> "${key.second} at ${value.location.toBlockVector3()}" }
-            .forEach(player::sendMessage)
+            .forEach(player::info)
     }
 
     @Subcommand("add")
@@ -94,24 +101,24 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @CommandPermission("redstonetools.pin.add")
     fun add(player: Player, name: String) {
         if (player.uniqueId to name in pins) {
-            player.sendMessage("Pin $name already exists!")
+            player.info("Pin $name already exists!")
             return
         }
         // this control flow is too backwards
         val result = blockListener.add(player) { event ->
             if (event.block.type != Material.LEVER) {
                 // this should just ask you to try again
-                player.sendMessage("That's not a lever! Restart by doing /pin add $name")
+                player.info("That's not a lever! Restart by doing /pin add $name")
                 return@add
             }
             pins[player.uniqueId to name] = Pin(event.block.location)
-            player.sendMessage("Pin $name added")
+            player.info("Pin $name added")
         }
         when (result) {
             // :(
             BlockListener.BlockResult.ADDED -> "Break the lever you want added as a pin"
             BlockListener.BlockResult.EXISTS -> "You're already adding a pin"
-        }.let(player::sendMessage)
+        }.let(player::info)
     }
 
     @Subcommand("remove")
@@ -121,7 +128,7 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
     fun remove(player: Player, name: String) {
         val removed = pins.remove(player.uniqueId to name) != null
         val message = if (removed) "Pin $name removed" else "No pin named $name"
-        player.sendMessage(message)
+        player.info(message)
     }
 
     @Subcommand("turn")
@@ -130,13 +137,13 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @CommandCompletion("@pin_state @pins")
     fun turn(player: Player, newState: PinState, name: String) {
         val pin = pins[player.uniqueId to name] ?: run {
-            player.sendMessage("No pin named $name")
+            player.info("No pin named $name")
             return
         }
         when (pin.setState(newState)) {
             is PinStateResult.OK -> "Turned $name $newState"
             is PinStateResult.PinDestroyed -> "Pin $name has been destroyed!"
-        }.let(player::sendMessage)
+        }.let(player::info)
     }
 
     @Subcommand("pulse")
@@ -145,17 +152,17 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @CommandCompletion("@pin_state @pins @range:1-100")
     fun pulse(player: Player, state: PinState, name: String, time: Int) {
         if (time < 1 || time > 100) {
-            player.sendMessage("Time must be between 1 and 100 ticks (inclusive)!")
+            player.info("Time must be between 1 and 100 ticks (inclusive)!")
             return
         }
         val pin = pins[player.uniqueId to name] ?: run {
-            player.sendMessage("No pin named $name")
+            player.info("No pin named $name")
             return
         }
         when (pin.setState(state)) {
             is PinStateResult.OK -> {}
             is PinStateResult.PinDestroyed -> {
-                player.sendMessage("Pin $name has been destroyed!")
+                player.info("Pin $name has been destroyed!")
                 return
             }
         }
@@ -164,7 +171,7 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
             when (pin.setState(state.not())) {
                 is PinStateResult.OK -> {}
                 is PinStateResult.PinDestroyed -> {
-                    player.sendMessage("Pin $name has been destroyed!")
+                    player.info("Pin $name has been destroyed!")
                 }
             }
         }, time * 2L)
@@ -176,18 +183,19 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @CommandCompletion("@pins")
     fun toggle(player: Player, name: String) {
         val pin = pins[player.uniqueId to name] ?: run {
-            player.sendMessage("No pin named $name")
+            player.info("No pin named $name")
             return
         }
 
         when (val result = pin.modifyState(PinState::not)) {
             is PinStateResult.OK -> "Toggled $name to ${result.newState}"
             is PinStateResult.PinDestroyed -> "Pin $name has been destroyed!"
-        }.let(player::sendMessage)
+        }.let(player::info)
     }
 }
 
 private typealias BlockHandler = (BlockBreakEvent) -> Unit
+
 private class BlockListener : Listener {
     private val players = mutableMapOf<UUID, BlockHandler>()
 

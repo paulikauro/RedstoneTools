@@ -1,20 +1,25 @@
 package redstonetools
 
 import com.sk89q.worldedit.WorldEdit
-import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.event.platform.PlayerInputEvent
+import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.util.eventbus.Subscribe
+import net.kyori.adventure.extra.kotlin.join
+import net.kyori.adventure.extra.kotlin.plus
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.Component.text
+import net.kyori.adventure.text.JoinConfiguration.separator
+import net.kyori.adventure.text.format.NamedTextColor.*
 import org.bukkit.Bukkit
-import org.bukkit.ChatColor.*
 import org.bukkit.entity.Player
 import org.bukkit.event.Listener
 import org.bukkit.plugin.java.JavaPlugin
+import org.bukkit.scoreboard.Criteria
 import org.bukkit.scoreboard.DisplaySlot
 import org.bukkit.scoreboard.Objective
 import kotlin.random.Random
 
 class WorldEditHelper(plugin: JavaPlugin, private val worldEdit: WorldEdit) : Listener {
-
     init {
         Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, this::checkPlayers, 0, 20)
         worldEdit.eventBus.register(this)
@@ -24,40 +29,42 @@ class WorldEditHelper(plugin: JavaPlugin, private val worldEdit: WorldEdit) : Li
     fun updateSelection(event: PlayerInputEvent) {
         val actor = event.player
         if (actor != null && actor.isPlayer) {
-            setPlayerSelection(BukkitAdapter.adapt(actor))
+            setPlayerSelection(actor.bukkit(), actor)
         }
     }
 
     private fun checkPlayers() {
-        Bukkit.getOnlinePlayers().forEach(this::setPlayerSelection)
+        Bukkit.getOnlinePlayers().forEach { player -> this.setPlayerSelection(player, player.we()) }
     }
 
-    private fun setPlayerSelection(player: Player) {
-        val session = worldEdit.sessionManager.get(BukkitAdapter.adapt(player))
-        val selection = session.getSelectionOrNull() ?: run {
+    private fun setPlayerSelection(player: Player, wePlayer: WEPlayer) {
+        val selection = worldEdit.sessionManager.get(wePlayer).getSelectionOrNull() ?: run {
             player.hideHelper()
             return
         }
-        val min = selection.maximumPoint
-        val max = selection.minimumPoint
+        val pos1 = selection.boundingBox.pos1
+        val pos2 = selection.boundingBox.pos2
+        fun BlockVector3.format() = arrayOf(x(), y(), z()).map { "$it"[GRAY] }
+            .join(separator(","[GRAY]))
+
         val lines = buildList {
-            add("${DARK_GREEN}Position A:")
-            add("   $GRAY${min.x()}$WHITE,$GRAY${min.y()}$WHITE,$GRAY${min.z()}")
+            add("Position 1:"[DARK_GREEN])
+            add(text("   ") + pos1.format())
             val volume = selection.volume
             if (volume != 1L) {
-                add("${DARK_GREEN}Position B:")
-                add("   $GRAY${max.x()}$WHITE,$GRAY${max.y()}$WHITE,$GRAY${max.z()}")
+                add("Position 2:"[DARK_GREEN])
+                add(text("   ") + pos2.format())
             }
-            add("${DARK_GREEN}Volume:")
-            val chatColor = when {
+            add("Volume:"[DARK_GREEN])
+            val volColor = when {
                 volume < 100000 -> GREEN
                 volume < 1000000 -> YELLOW
                 volume < 2000000 -> RED
                 else -> DARK_RED
             }
-            add("   $chatColor$volume")
-            add("${DARK_GREEN}Dimensions:")
-            fun color(x: Int) = when {
+            add("   $volume"[volColor])
+            add("Dimensions:"[DARK_GREEN])
+            fun dimColor(x: Int) = when {
                 x < 50 -> GREEN
                 x < 75 -> YELLOW
                 x < 100 -> RED
@@ -65,17 +72,17 @@ class WorldEditHelper(plugin: JavaPlugin, private val worldEdit: WorldEdit) : Li
             }
 
             val line = with(selection) { arrayOf(width, height, length) }
-                .joinToString(separator = "${GRAY}x") { "${color(it)}$it" }
-            add("   $line")
+                .map { "$it"[dimColor(it)] }
+                .join(separator("x"[GRAY]))
+            add(text("   ") + line)
         }
         player.scoreboard = Bukkit.getScoreboardManager().newScoreboard.apply {
             registerNewObjective(
                 Random.nextInt(1234567890).toString(),
-                "dummy",
-                "Current selection",
+                Criteria.DUMMY,
+                "Current selection"[RED],
             ).apply {
                 displaySlot = DisplaySlot.SIDEBAR
-                displayName = "${RED}Current Selection"
                 addLinesToScoreboard(lines)
             }
         }
@@ -85,9 +92,12 @@ class WorldEditHelper(plugin: JavaPlugin, private val worldEdit: WorldEdit) : Li
         scoreboard = Bukkit.getScoreboardManager().newScoreboard
     }
 
-    private fun Objective.addLinesToScoreboard(lines: List<String>) {
+    private fun Objective.addLinesToScoreboard(lines: List<Component>) {
         lines.reversed().forEachIndexed { index, line ->
-            getScore(line).score = index + 1
+            getScore("wehelper-$index").apply {
+                score = index + 1
+                customName(line)
+            }
         }
     }
 }

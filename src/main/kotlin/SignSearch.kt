@@ -6,8 +6,6 @@ import co.aikar.commands.CommandCompletions
 import co.aikar.commands.annotation.*
 import com.google.re2j.Pattern
 import com.google.re2j.PatternSyntaxException
-import com.sk89q.worldedit.LocalSession
-import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.function.RegionFunction
 import com.sk89q.worldedit.function.RegionMaskingFilter
 import com.sk89q.worldedit.function.mask.BlockCategoryMask
@@ -32,22 +30,24 @@ val searchResults = HashMap<UUID, MutableList<LocationContainer>>()
 @CommandAlias("/signsearch|/ss")
 @Description("Search for text of signs within a selection using a regular expression")
 @CommandPermission("redstonetools.signsearch")
-class SignSearch() : BaseCommand() {
+class SignSearch : BaseCommand() {
     @Default
-    @Syntax("[expression]")
+    @Syntax("[regex]")
     fun search(
         player: WEPlayer,
-        session: LocalSession,
         selection: Region,
-        arg: String
+        arg: String,
     ) {
+        // TODO:
+        //  - //ss without selection gives you "plz select first"
+        //  - //ss with selection gives you usage
         val pattern = try {
             Pattern.compile(arg)
         } catch (e: PatternSyntaxException) {
             throw RedstoneToolsException("Illegal pattern: " + e.message)
         }
         val matches = mutableListOf<LocationContainer>()
-        // it should not be null if we got this far
+        // selection's world is never null when given from the command context
         val world = selection.world!!
         val blockMask = BlockCategoryMask(world, BlockCategories.ALL_SIGNS)
         val regionFunction = RegionFunction { position ->
@@ -63,10 +63,10 @@ class SignSearch() : BaseCommand() {
         Operations.complete(regionVisitor)
         if (matches.isNotEmpty()) {
             searchResults[player.uniqueId] = matches
-            page(BukkitAdapter.adapt(player), 1)
+            page(player.bukkit(), 1)
         } else {
             searchResults.remove(player.uniqueId)
-            player.printInfo(TextComponent.of("No results found."))
+            player.info("No results found.")
         }
     }
 
@@ -75,7 +75,7 @@ class SignSearch() : BaseCommand() {
     @Syntax("[number]")
     fun page(
         player: Player,
-        page: Int
+        page: Int,
     ) {
         val results = searchResults[player.uniqueId] ?: throw RedstoneToolsException("Use //signsearch to get results")
         val paginationBox = LocationsPaginationBox(results, "Search Results", "//signsearch -p %page%")
@@ -84,7 +84,7 @@ class SignSearch() : BaseCommand() {
         } catch (_: InvalidComponentException) {
             throw RedstoneToolsException("Invalid page number.")
         }
-        BukkitAdapter.adapt(player).print(component)
+        player.we().print(component)
     }
 
     private fun parseMatch(baseBlock: BaseBlock, pattern: Pattern): TextComponent? {

@@ -34,7 +34,7 @@ class Slab : BaseCommand() {
             if (slab != null) {
                 player.inventory.setItemInMainHand(slab)
             } else {
-                // kinda bad but it shouldn't be null
+                // kinda bad, but it shouldn't be null
                 player.inventory.addItem(getSlab(Material.SMOOTH_STONE_SLAB.toString())!!)
             }
         }

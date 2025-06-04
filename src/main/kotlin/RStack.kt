@@ -14,11 +14,8 @@ import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.math.transform.AffineTransform
 import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.util.Direction
-import com.sk89q.worldedit.util.formatting.text.TextComponent
 import java.lang.Integer.parseInt
 import kotlin.math.abs
-
-typealias WEPlayer = com.sk89q.worldedit.entity.Player
 
 private val BlockVector3.isUpright: Boolean
     get() = x() == 0 && z() == 0
@@ -33,7 +30,7 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         player: WEPlayer,
         session: LocalSession,
         selection: Region,
-        args: Array<String>
+        args: Array<String>,
     ) {
         var expand = false
         var withAir = false
@@ -65,7 +62,7 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         }
         try {
             doStack(player, session, selection, count, spacing, expand, withAir, direction ?: "me")
-        } catch (e: UnknownDirectionException) {
+        } catch (_: UnknownDirectionException) {
             throw ConditionFailedException("Unknown direction")
         }
     }
@@ -79,7 +76,7 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         spacing: Int,
         expand: Boolean,
         withAir: Boolean,
-        direction: String
+        direction: String,
     ): Int {
         val spacingVec = directionVectorFor(player, direction).multiply(spacing)
         val affected = try {
@@ -102,7 +99,7 @@ class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         } catch (e: WorldEditException) {
             throw ConditionFailedException("Something went wrong: ${e.message}")
         }
-        player.printInfo(TextComponent.of("Operation completed, $affected blocks affected"))
+        player.info("Operation completed, $affected blocks affected")
         if (expand) {
             expandSelection(selection, spacingVec.multiply(count), session, player)
         }

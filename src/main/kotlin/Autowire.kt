@@ -1,11 +1,8 @@
 package redstonetools
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.annotation.CommandAlias
-import co.aikar.commands.annotation.CommandPermission
-import co.aikar.commands.annotation.Default
-import co.aikar.commands.annotation.Description
-import net.kyori.adventure.text.Component
+import co.aikar.commands.annotation.*
+import net.kyori.adventure.text.Component.text
 import org.bukkit.GameMode
 import org.bukkit.Material
 import org.bukkit.block.data.type.RedstoneWire
@@ -27,9 +24,10 @@ class Autowire(
     private val autos = mutableSetOf<UUID>()
 
     @Default
+    @Description("Toggle autowire")
     fun toggleAutowire(player: Player) {
         player.sendActionBar(
-            Component.text(
+            text(
                 if (autos.remove(player.uniqueId)) {
                     "Auto wire Disabled"
                 } else {
@@ -40,6 +38,11 @@ class Autowire(
         )
     }
 
+    @CatchUnknown
+    fun help(player: Player) {
+        player.err("Usage /autowire|/aw")
+    }
+
     @EventHandler
     fun onLeaveEvent(event: PlayerQuitEvent) {
         autos.remove(event.player.uniqueId)
@@ -47,8 +50,7 @@ class Autowire(
 
     @EventHandler(ignoreCancelled = true)
     fun onAutoWireEvent(event: BlockPlaceEvent) {
-        if (
-            event.player.uniqueId !in autos
+        if (event.player.uniqueId !in autos
             || event.player.gameMode != GameMode.CREATIVE
             || !event.block.blockData.material.isSolid
             || event.blockPlaced.type.hasGravity()
