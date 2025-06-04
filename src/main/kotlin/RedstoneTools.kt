@@ -63,7 +63,7 @@ class RedstoneTools : JavaPlugin() {
             return
         }
         val worldEdit = wePlugin.worldEdit
-        val liveStack = LiveStack(this, worldEdit)
+        val liveStack = LiveStack(this)
         val autowire = Autowire(server.pluginManager, liveStack, this)
         val pins = PinCommand(this)
         val autoRotate = AutoRotate()
@@ -79,6 +79,7 @@ class RedstoneTools : JavaPlugin() {
             pins.listener,
         ).forEach { server.pluginManager.registerEvents(it, this) }
         PaperCommandManager(this).apply {
+            enableUnstableAPI("help")
             arrayOf(
                 "slabs" to SlabCompletionHandler(),
                 "we_mask" to MaskCompletionHandler(worldEdit),

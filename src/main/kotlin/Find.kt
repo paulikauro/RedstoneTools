@@ -23,12 +23,14 @@ val findResults = HashMap<UUID, MutableList<LocationContainer>>()
 @CommandPermission("redstonetools.find")
 class Find : BaseCommand() {
     @Default
-    @Syntax("[material]")
+    @Syntax("[mask]")
     fun find(
         player: WEPlayer,
         mask: Mask,
         selection: Region,
     ) {
+        // TODO: this gives you "no match for asdf" error if you give it an invalid mask
+        //  it should be something nicer
         val locations = mutableListOf<LocationContainer>()
         val regionFunction = RegionFunction { position ->
             locations.add(LocationContainer(position, TextComponent.of(position.toString())))
@@ -62,7 +64,6 @@ class Find : BaseCommand() {
         }
         player.print(component)
     }
-
 }
 
 class FindPageCompletionHandler :

@@ -3,6 +3,7 @@ package redstonetools
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.BukkitCommandCompletionContext
 import co.aikar.commands.CommandCompletions
+import co.aikar.commands.CommandHelp
 import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.util.SideEffectSet
@@ -78,10 +79,9 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
         }
     }
 
-    @Default
-    @CatchUnknown
-    fun help(player: Player) {
-        player.sendMessage("Unknown subcommand! Use tab completion or refer to #announcements message")
+    @HelpCommand
+    fun help(help: CommandHelp) {
+        help.showHelp()
     }
 
     @Subcommand("list")

@@ -1,12 +1,12 @@
 package redstonetools
 
 import co.aikar.commands.BaseCommand
+import co.aikar.commands.CommandHelp
 import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.regions.selector.limit.PermissiveSelectorLimits
-import org.bukkit.entity.Player
 import java.util.*
 
 private typealias Stack = MutableList<Pair<BlockVector3, BlockVector3>>
@@ -19,10 +19,9 @@ class SelectionStack : BaseCommand() {
 
     private fun stackOf(player: WEPlayer): Stack = stacks.computeIfAbsent(player.uniqueId) { mutableListOf() }
 
-    @Default
-    @CatchUnknown
-    fun help(player: Player) {
-        player.sendMessage("Unknown subcommand! Use tab completion or refer to #announcements message")
+    @HelpCommand
+    fun help(help: CommandHelp) {
+        help.showHelp()
     }
 
     @Subcommand("push")

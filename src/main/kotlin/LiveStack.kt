@@ -5,7 +5,6 @@ import co.aikar.commands.annotation.CommandAlias
 import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Default
 import co.aikar.commands.annotation.Description
-import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.function.mask.ExistingBlockMask
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.Region
@@ -22,7 +21,7 @@ import java.util.*
 @CommandAlias("/livestack|/ls")
 @Description("Redstone live stacking command")
 @CommandPermission("redstonetools.livestack")
-class LiveStack(private val plugin: Plugin, private val worldEdit: WorldEdit) : BaseCommand(), Listener {
+class LiveStack(private val plugin: Plugin) : BaseCommand(), Listener {
     private val gonnaLiveStack = mutableMapOf<UUID, State>()
 
     sealed interface State {

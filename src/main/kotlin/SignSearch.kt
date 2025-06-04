@@ -34,13 +34,16 @@ val searchResults = HashMap<UUID, MutableList<LocationContainer>>()
 @CommandPermission("redstonetools.signsearch")
 class SignSearch : BaseCommand() {
     @Default
-    @Syntax("[expression]")
+    @Syntax("[regex]")
     fun search(
         player: WEPlayer,
         session: LocalSession,
         selection: Region,
         arg: String,
     ) {
+        // TODO:
+        //  - //ss without selection gives you "plz select first"
+        //  - //ss with selection gives you usage
         val pattern = try {
             Pattern.compile(arg)
         } catch (e: PatternSyntaxException) {
