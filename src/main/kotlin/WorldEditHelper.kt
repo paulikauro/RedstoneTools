@@ -1,7 +1,6 @@
 package redstonetools
 
 import com.sk89q.worldedit.WorldEdit
-import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.event.platform.PlayerInputEvent
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.util.eventbus.Subscribe
@@ -30,17 +29,16 @@ class WorldEditHelper(plugin: JavaPlugin, private val worldEdit: WorldEdit) : Li
     fun updateSelection(event: PlayerInputEvent) {
         val actor = event.player
         if (actor != null && actor.isPlayer) {
-            setPlayerSelection(BukkitAdapter.adapt(actor))
+            setPlayerSelection(actor.bukkit(), actor)
         }
     }
 
     private fun checkPlayers() {
-        Bukkit.getOnlinePlayers().forEach(this::setPlayerSelection)
+        Bukkit.getOnlinePlayers().forEach { player -> this.setPlayerSelection(player, player.we()) }
     }
 
-    private fun setPlayerSelection(player: Player) {
-        val session = worldEdit.sessionManager.get(BukkitAdapter.adapt(player))
-        val selection = session.getSelectionOrNull() ?: run {
+    private fun setPlayerSelection(player: Player, wePlayer: WEPlayer) {
+        val selection = worldEdit.sessionManager.get(wePlayer).getSelectionOrNull() ?: run {
             player.hideHelper()
             return
         }

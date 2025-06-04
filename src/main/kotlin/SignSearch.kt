@@ -10,7 +10,6 @@ import com.sk89q.jnbt.CompoundTag
 import com.sk89q.jnbt.ListTag
 import com.sk89q.jnbt.StringTag
 import com.sk89q.worldedit.LocalSession
-import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.function.RegionFunction
 import com.sk89q.worldedit.function.RegionMaskingFilter
 import com.sk89q.worldedit.function.mask.BlockCategoryMask
@@ -62,7 +61,7 @@ class SignSearch : BaseCommand() {
         Operations.complete(regionVisitor)
         if (matches.isNotEmpty()) {
             searchResults[player.uniqueId] = matches
-            page(BukkitAdapter.adapt(player), 1)
+            page(player.bukkit(), 1)
         } else {
             searchResults.remove(player.uniqueId)
             player.info("No results found.")
@@ -83,7 +82,7 @@ class SignSearch : BaseCommand() {
         } catch (_: InvalidComponentException) {
             throw RedstoneToolsException("Invalid page number.")
         }
-        BukkitAdapter.adapt(player).print(component)
+        player.we().print(component)
     }
 
     private fun parseMatch(baseBlock: BaseBlock, pattern: Pattern): TextComponent? {

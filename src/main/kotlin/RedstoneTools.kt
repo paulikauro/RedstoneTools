@@ -4,7 +4,6 @@ import co.aikar.commands.*
 import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.WorldEditException
-import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
 import com.sk89q.worldedit.extension.factory.MaskFactory
 import com.sk89q.worldedit.function.mask.Mask
@@ -89,13 +88,13 @@ class RedstoneTools : JavaPlugin() {
             ).forEach { (id, handler) -> commandCompletions.registerCompletion(id, handler) }
             commandCompletions.setDefaultCompletion("we_mask", Mask::class.java)
             commandContexts.registerContext(Mask::class.java) { context ->
-                val player = context.player?.let(BukkitAdapter::adapt)
+                val player = context.player?.we()
                 val localSession = player?.let(worldEdit.sessionManager::get)
                 parseMaskOrThrow(context.popFirstArg(), worldEdit, localSession, player)
             }
-            fun BukkitCommandExecutionContext.requireWEPlayer(): com.sk89q.worldedit.entity.Player =
-                player?.let(BukkitAdapter::adapt) ?: throw ConditionFailedException("This can only be run by a player")
-            commandContexts.registerIssuerOnlyContext(com.sk89q.worldedit.entity.Player::class.java) { context ->
+            fun BukkitCommandExecutionContext.requireWEPlayer(): WEPlayer =
+                player?.we() ?: throw ConditionFailedException("This can only be run by a player")
+            commandContexts.registerIssuerOnlyContext(WEPlayer::class.java) { context ->
                 context.requireWEPlayer()
             }
             commandContexts.registerIssuerOnlyContext(LocalSession::class.java) { context ->
