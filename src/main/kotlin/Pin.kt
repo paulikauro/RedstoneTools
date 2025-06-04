@@ -88,7 +88,7 @@ class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @Description("List your pins")
     @CommandPermission("redstonetools.pin.list")
     fun list(player: Player) {
-        player.sendMessage("Your pins:")
+        player.info("Your pins:")
         pins
             .filterKeys { (uuid, _) -> uuid == player.uniqueId }
             // TODO: click to tp
