@@ -8,8 +8,6 @@ import com.sk89q.worldedit.extension.input.ParserContext
 import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.Region
-import com.sk89q.worldedit.util.formatting.text.TextComponent
-import com.sk89q.worldedit.util.formatting.text.format.TextColor
 import de.tr7zw.nbtapi.NBT
 import de.tr7zw.nbtapi.iface.ReadWriteItemNBT
 import net.kyori.adventure.audience.Audience
@@ -22,18 +20,6 @@ import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
-
-fun String.withHighlightedReplacement(replacement: String): TextComponent =
-    TextComponent.of(this.substringBefore(replacement))
-        .color(TextColor.WHITE)
-        .append(
-            TextComponent.of(replacement)
-                .color(TextColor.YELLOW)
-        )
-        .append(
-            TextComponent.of(this.substringAfter(replacement))
-                .color(TextColor.WHITE)
-        )
 
 operator fun String.get(s: ComponentBuilderApplicable): Component =
     text().content(this).applicableApply(s).build()

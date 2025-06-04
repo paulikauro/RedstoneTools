@@ -50,9 +50,12 @@ class SignSearch : BaseCommand() {
             throw RedstoneToolsException("Illegal pattern: " + e.message)
         }
         val matches = mutableListOf<LocationContainer>()
-        val blockMask = BlockCategoryMask(session.selectionWorld, BlockCategories.SIGNS)
+        // selection's world is never null when given from the command context
+        val world = selection.world!!
+        // BlockCategories.ALL_SIGNS when WorldEdit update
+        val blockMask = BlockCategoryMask(world, BlockCategories.get("minecraft:all_signs"))
         val regionFunction = RegionFunction { position ->
-            val baseBlock = session.selectionWorld.getFullBlock(position)
+            val baseBlock = world.getFullBlock(position)
             val match = parseMatch(baseBlock, pattern)
             if (match != null) {
                 matches.add(LocationContainer(position, match))
@@ -115,6 +118,18 @@ class SignSearch : BaseCommand() {
 //            .ifEmpty { lines.joinToString("\n").findAll(pattern) }
     }
 }
+
+private fun String.withHighlightedReplacement(replacement: String): TextComponent =
+    TextComponent.of(this.substringBefore(replacement))
+        .color(TextColor.WHITE)
+        .append(
+            TextComponent.of(replacement)
+                .color(TextColor.YELLOW)
+        )
+        .append(
+            TextComponent.of(this.substringAfter(replacement))
+                .color(TextColor.WHITE)
+        )
 
 private data class Match(val text: String, val start: Int, val end: Int)
 
