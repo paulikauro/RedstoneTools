@@ -104,7 +104,7 @@ private class SignSearch(private val searchResults: MutableMap<UUID, List<Locati
 
         return lines
             .mapIndexedNotNull { index, line ->
-                val (matched, parts) = line.splitMap(pattern, noMatch = TextComponent::of) { matcher ->
+                val (didMatch, parts) = line.splitMap(pattern, noMatch = TextComponent::of) { matcher ->
                     val m = matcher.group()
                     if (m.isEmpty()) {
                         TextComponent.of("|").color(TextColor.RED)
@@ -112,7 +112,7 @@ private class SignSearch(private val searchResults: MutableMap<UUID, List<Locati
                         TextComponent.of(matcher.group()).color(TextColor.YELLOW)
                     }
                 }
-                if (matched) {
+                if (didMatch) {
                     TextComponent.of("Line ${index + 1}: ")
                         .color(TextColor.GRAY)
                         .append(TextComponent.join(TextComponent.empty(), parts).colorIfAbsent(TextColor.WHITE))
@@ -131,36 +131,35 @@ private fun <T> String.splitMap(
     noMatch: (String) -> T,
     onMatch: (Matcher) -> T,
 ): Pair<Boolean, MutableList<T>> {
-    val matcher = pattern.matcher(this)
+    val m = pattern.matcher(this)
     val result = mutableListOf<T>()
     var i = 0
-    var matched = false
+    var didMatch = false
     do {
-        val doesMatch = matcher.find(i)
-        if (!doesMatch) {
+        if (!m.find(i)) {
             // nothing matched
             result.add(noMatch(substring(i)))
             break
         }
         // matcher.end() is exclusive
-        if (matcher.end() <= i) {
+        if (m.end() <= i) {
             // empty match, we can't make progress anymore
             // dunno if this works like it should
-            matched = true
-            result.add(onMatch(matcher))
+            didMatch = true
+            result.add(onMatch(m))
             result.add(noMatch(substring(i)))
             break
         }
-        val matchStart = matcher.start()
+        val matchStart = m.start()
         if (matchStart != i) {
             // some text before match
             result.add(noMatch(substring(i, matchStart)))
         }
-        matched = true
-        result.add(onMatch(matcher))
-        i = matcher.end()
+        didMatch = true
+        result.add(onMatch(m))
+        i = m.end()
     } while (i < length)
-    return matched to result
+    return didMatch to result
 }
 
 private fun json2plain(json: String): String = PlainTextComponentSerializer.plainText().serialize(
