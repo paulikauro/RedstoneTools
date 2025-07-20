@@ -29,7 +29,7 @@ dependencies {
 }
 
 bukkit {
-    main = "redstonetools.RedstoneTools"
+    main = "io.github.paulikauro.redstonetools.RedstoneTools"
     apiVersion = "1.20"
     depend = listOf("WorldEdit", "NBTAPI")
 }
