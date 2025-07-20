@@ -5,7 +5,6 @@ import com.sk89q.worldedit.IncompleteRegionException
 import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.bukkit.BukkitAdapter
-import com.sk89q.worldedit.extension.factory.MaskFactory
 import com.sk89q.worldedit.extension.input.ParserContext
 import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
@@ -122,7 +121,7 @@ fun PluginScope.registerWECommandContexts(worldEdit: WorldEdit) = commandManager
 
 private class MaskCompletionHandler(worldEdit: WorldEdit) :
     CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
-    private val maskFactory = MaskFactory(worldEdit)
+    private val maskFactory = worldEdit.maskFactory
     override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> =
         maskFactory.getSuggestions(context.input)
 }

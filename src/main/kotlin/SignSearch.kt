@@ -2,6 +2,7 @@ package redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
+import com.google.re2j.Matcher
 import com.google.re2j.Pattern
 import com.google.re2j.PatternSyntaxException
 import com.sk89q.jnbt.CompoundTag
@@ -19,9 +20,9 @@ import com.sk89q.worldedit.util.formatting.text.format.TextColor
 import com.sk89q.worldedit.world.block.BaseBlock
 import com.sk89q.worldedit.world.block.BlockCategories
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.entity.Player
 import java.util.*
-import net.kyori.adventure.text.TextComponent as ATextComponent
 
 fun PluginScope.createSignSearch() {
     val searchResults = HashMap<UUID, List<LocationContainer>>()
@@ -99,45 +100,69 @@ private class SignSearch(private val searchResults: MutableMap<UUID, List<Locati
         val front = (compoundTag.value["front_text"] as CompoundTag).value["messages"] as ListTag
         val back = (compoundTag.value["back_text"] as CompoundTag).value["messages"] as ListTag
         val messages = front.value + back.value
-        val lines = messages.map { i ->
-            val textTag = i as StringTag
-            val component = GsonComponentSerializer.gson().deserialize(textTag.value) as ATextComponent
-            component.content()
-        }
+        val lines = messages.map { tag -> json2plain((tag as StringTag).value) }
 
         return lines
             .mapIndexedNotNull { index, line ->
-                line
-                    .findFirstMatch(pattern)
-                    ?.let {
-                        TextComponent.of("Line ${index + 1}: ")
-                            .color(TextColor.GRAY)
-                            .append(line.withHighlightedReplacement(it.text))
+                val (matched, parts) = line.splitMap(pattern, noMatch = TextComponent::of) { matcher ->
+                    val m = matcher.group()
+                    if (m.isEmpty()) {
+                        TextComponent.of("|").color(TextColor.RED)
+                    } else {
+                        TextComponent.of(matcher.group()).color(TextColor.YELLOW)
                     }
+                }
+                if (matched) {
+                    TextComponent.of("Line ${index + 1}: ")
+                        .color(TextColor.GRAY)
+                        .append(TextComponent.join(TextComponent.empty(), parts).colorIfAbsent(TextColor.WHITE))
+                } else {
+                    null
+                }
             }
             .ifEmpty { null }
             ?.let { matchComponents -> TextComponent.join(TextComponent.newline(), matchComponents) }
-        // TODO: multiline matches
-//            .ifEmpty { lines.joinToString("\n").findAll(pattern) }
     }
 }
 
-private fun String.withHighlightedReplacement(replacement: String): TextComponent =
-    TextComponent.of(this.substringBefore(replacement))
-        .color(TextColor.WHITE)
-        .append(
-            TextComponent.of(replacement)
-                .color(TextColor.YELLOW)
-        )
-        .append(
-            TextComponent.of(this.substringAfter(replacement))
-                .color(TextColor.WHITE)
-        )
-
-private data class Match(val text: String, val start: Int, val end: Int)
-
-private fun String.findFirstMatch(pattern: Pattern): Match? {
+// TODO: maybe pull this into a library, it's in ChattORE too (except not RE2J)
+private fun <T> String.splitMap(
+    pattern: Pattern,
+    noMatch: (String) -> T,
+    onMatch: (Matcher) -> T,
+): Pair<Boolean, MutableList<T>> {
     val matcher = pattern.matcher(this)
-    if (!matcher.find()) return null
-    return Match(matcher.group(), matcher.start(), matcher.end())
+    val result = mutableListOf<T>()
+    var i = 0
+    var matched = false
+    do {
+        val doesMatch = matcher.find(i)
+        if (!doesMatch) {
+            // nothing matched
+            result.add(noMatch(substring(i)))
+            break
+        }
+        // matcher.end() is exclusive
+        if (matcher.end() <= i) {
+            // empty match, we can't make progress anymore
+            // dunno if this works like it should
+            matched = true
+            result.add(onMatch(matcher))
+            result.add(noMatch(substring(i)))
+            break
+        }
+        val matchStart = matcher.start()
+        if (matchStart != i) {
+            // some text before match
+            result.add(noMatch(substring(i, matchStart)))
+        }
+        matched = true
+        result.add(onMatch(matcher))
+        i = matcher.end()
+    } while (i < length)
+    return matched to result
 }
+
+private fun json2plain(json: String): String = PlainTextComponentSerializer.plainText().serialize(
+    GsonComponentSerializer.gson().deserialize(json)
+)
