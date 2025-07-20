@@ -45,14 +45,8 @@ class RedstoneTools : JavaPlugin() {
                 maxTicks = getInt("maxTicks", 5),
             )
         }
-        val wePlugin = server.pluginManager.getPlugin("WorldEdit")
-        if (wePlugin !is WorldEditPlugin) {
-            logger.severe("Could not load WorldEdit! RedstoneTools requires WorldEdit to function properly.")
-            // TODO: actually disable?
-            logger.severe("Disabled.")
-            return
-        }
-        val worldEdit = wePlugin.worldEdit
+        // should never fail since WorldEdit is a dependency in plugin.yml
+        val worldEdit = (server.pluginManager.getPlugin("WorldEdit") as WorldEditPlugin).worldEdit
         PluginScope(this, PaperCommandManager(this)).apply {
             commandManager.apply {
                 enableUnstableAPI("help")
