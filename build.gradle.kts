@@ -35,8 +35,8 @@ bukkit {
 }
 
 tasks.shadowJar {
-    relocate("co.aikar.commands", "redstonetools.acf.commands")
-    relocate("co.aikar.locales", "redstonetools.acf.locales")
+    relocate("co.aikar.commands", "io.github.paulikauro.redstonetools.acf.commands")
+    relocate("co.aikar.locales", "io.github.paulikauro.redstonetools.acf.locales")
 }
 
 tasks.withType<KotlinCompile> {
