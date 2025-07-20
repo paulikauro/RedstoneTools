@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-group = ""
+group = "io.github.paulikauro.redstonetools"
 version = "1.4.2-SNAPSHOT"
 
 plugins {

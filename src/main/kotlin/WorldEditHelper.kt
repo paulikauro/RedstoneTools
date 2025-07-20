@@ -1,4 +1,4 @@
-package redstonetools
+package io.github.paulikauro.redstonetools
 
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.event.platform.PlayerInputEvent

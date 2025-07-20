@@ -1,4 +1,4 @@
-package redstonetools
+package io.github.paulikauro.redstonetools
 
 import co.aikar.commands.*
 import com.sk89q.worldedit.IncompleteRegionException

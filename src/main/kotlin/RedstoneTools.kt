@@ -1,6 +1,9 @@
-package redstonetools
+package io.github.paulikauro.redstonetools
 
-import co.aikar.commands.*
+import co.aikar.commands.BaseCommand
+import co.aikar.commands.CommandIssuer
+import co.aikar.commands.PaperCommandManager
+import co.aikar.commands.RegisteredCommand
 import com.sk89q.worldedit.WorldEditException
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
 import net.kyori.adventure.extra.kotlin.plus
