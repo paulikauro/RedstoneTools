@@ -64,10 +64,6 @@ Usage: `/container [type] [power]`
 - `type`: a container of type `chest`, `barrel`, `hopper`, `furnace` or `jukebox`.
 - `power`: an integer of range `0` through `15`.
 
-## `/livestack`
-
-Automatically stacks any block you place
-
 ## `//selstack`
 
 - `//selstack push` pushes your selection points onto a stack (and clears your current selection)
