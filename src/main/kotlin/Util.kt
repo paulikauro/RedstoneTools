@@ -3,29 +3,44 @@ package redstonetools
 import com.sk89q.worldedit.IncompleteRegionException
 import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.WorldEdit
+import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.extension.input.ParserContext
 import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.Region
-import com.sk89q.worldedit.util.formatting.text.TextComponent
-import com.sk89q.worldedit.util.formatting.text.format.TextColor
 import de.tr7zw.nbtapi.NBT
-import de.tr7zw.nbtapi.iface.ReadWriteItemNBT
+import de.tr7zw.nbtapi.iface.ReadWriteNBT
+import net.kyori.adventure.audience.Audience
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.Component.text
+import net.kyori.adventure.text.ComponentBuilderApplicable
+import net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE
+import net.kyori.adventure.text.format.NamedTextColor.RED
 import org.bukkit.Location
+import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 
-fun String.withHighlightedReplacement(replacement: String): TextComponent =
-    TextComponent.of(this.substringBefore(replacement))
-        .color(TextColor.WHITE)
-        .append(
-            TextComponent.of(replacement)
-                .color(TextColor.YELLOW)
-        )
-        .append(
-            TextComponent.of(this.substringAfter(replacement))
-                .color(TextColor.WHITE)
-        )
+operator fun String.get(s: ComponentBuilderApplicable): Component =
+    text().content(this).applicableApply(s).build()
+
+operator fun ComponentBuilderApplicable.times(other: ComponentBuilderApplicable) = ComponentBuilderApplicable {
+    it.applicableApply(this)
+    it.applicableApply(other)
+}
+
+// overloads for WEPlayer until WE migrates to Adventure
+fun Audience.info(msg: String): Unit = sendMessage(msg[LIGHT_PURPLE])
+fun WEPlayer.info(msg: String): Unit = sendMessage(msg[LIGHT_PURPLE])
+fun Audience.err(msg: String): Unit = sendMessage(msg[RED])
+fun WEPlayer.err(msg: String): Unit = sendMessage(msg[RED])
+
+typealias WEPlayer = com.sk89q.worldedit.entity.Player
+
+fun Player.we(): WEPlayer = BukkitAdapter.adapt(this)
+fun WEPlayer.bukkit(): Player = BukkitAdapter.adapt(this)
+
+fun WEPlayer.sendMessage(message: Component): Unit = bukkit().sendMessage(message)
 
 fun Location.toBlockVector3(): BlockVector3 = BlockVector3.at(x, y, z)
 
@@ -35,15 +50,7 @@ inline fun <T : ItemMeta> ItemStack.modifyMeta(action: T.() -> Unit) {
     itemMeta = (itemMeta as T).apply(action)
 }
 
-fun ItemStack.modifyNBT(action: ReadWriteItemNBT.() -> Unit) = this.also { NBT.modify(this, action) }
-
-fun ReadWriteItemNBT.addFakeEnchant() {
-    getCompoundList("Enchantments").addCompound().apply {
-        setString("id", "minecraft:knockback")
-        setShort("lvl", 1.toShort())
-    }
-    setInteger("HideFlags", 1)
-}
+fun ItemStack.modifyComponents(action: ReadWriteNBT.() -> Unit) = this.also { NBT.modifyComponents(this, action) }
 
 fun parseMaskOrThrow(arg: String, worldEdit: WorldEdit, localSession: LocalSession?, player: WEPlayer?): Mask {
     val parserContext = ParserContext().apply {
@@ -57,8 +64,8 @@ fun parseMaskOrThrow(arg: String, worldEdit: WorldEdit, localSession: LocalSessi
 }
 
 fun LocalSession.getSelectionOrNull(): Region? = try {
-    getSelection(selectionWorld ?: throw IncompleteRegionException())
-} catch (exception: IncompleteRegionException) {
+    selection
+} catch (_: IncompleteRegionException) {
     null
 }
 

@@ -4,30 +4,25 @@ import co.aikar.commands.BaseCommand
 import co.aikar.commands.BukkitCommandCompletionContext
 import co.aikar.commands.CommandCompletions
 import co.aikar.commands.annotation.*
-import com.sk89q.jnbt.StringTag
-import com.sk89q.worldedit.WorldEdit
-import com.sk89q.worldedit.bukkit.BukkitAdapter
+import com.google.re2j.Pattern
+import com.google.re2j.PatternSyntaxException
 import com.sk89q.worldedit.function.RegionFunction
 import com.sk89q.worldedit.function.RegionMaskingFilter
 import com.sk89q.worldedit.function.mask.BlockCategoryMask
 import com.sk89q.worldedit.function.operation.Operations
 import com.sk89q.worldedit.function.visitor.RegionVisitor
-import com.sk89q.worldedit.world.block.BaseBlock
-import com.sk89q.worldedit.world.block.BlockCategories
-import org.bukkit.entity.Player
-import java.util.*
-import kotlin.collections.HashMap
-import kotlin.math.ceil
-import com.google.re2j.Pattern
-import com.google.re2j.PatternSyntaxException
-import com.sk89q.jnbt.CompoundTag
-import com.sk89q.jnbt.ListTag
-import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.util.formatting.component.InvalidComponentException
 import com.sk89q.worldedit.util.formatting.text.TextComponent
 import com.sk89q.worldedit.util.formatting.text.format.TextColor
+import com.sk89q.worldedit.world.block.BaseBlock
+import com.sk89q.worldedit.world.block.BlockCategories
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
+import org.bukkit.entity.Player
+import org.enginehub.linbus.tree.LinTagType.compoundTag
+import org.enginehub.linbus.tree.LinTagType.stringTag
+import java.util.*
+import kotlin.math.ceil
 import net.kyori.adventure.text.TextComponent as ATextComponent
 
 val searchResults = HashMap<UUID, MutableList<LocationContainer>>()
@@ -35,24 +30,28 @@ val searchResults = HashMap<UUID, MutableList<LocationContainer>>()
 @CommandAlias("/signsearch|/ss")
 @Description("Search for text of signs within a selection using a regular expression")
 @CommandPermission("redstonetools.signsearch")
-class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
+class SignSearch : BaseCommand() {
     @Default
-    @Syntax("[expression]")
+    @Syntax("[regex]")
     fun search(
         player: WEPlayer,
-        session: LocalSession,
         selection: Region,
-        arg: String
+        arg: String,
     ) {
+        // TODO:
+        //  - //ss without selection gives you "plz select first"
+        //  - //ss with selection gives you usage
         val pattern = try {
             Pattern.compile(arg)
         } catch (e: PatternSyntaxException) {
             throw RedstoneToolsException("Illegal pattern: " + e.message)
         }
         val matches = mutableListOf<LocationContainer>()
-        val blockMask = BlockCategoryMask(session.selectionWorld, BlockCategories.SIGNS)
+        // selection's world is never null when given from the command context
+        val world = selection.world!!
+        val blockMask = BlockCategoryMask(world, BlockCategories.ALL_SIGNS)
         val regionFunction = RegionFunction { position ->
-            val baseBlock = session.selectionWorld.getFullBlock(position)
+            val baseBlock = world.getFullBlock(position)
             val match = parseMatch(baseBlock, pattern)
             if (match != null) {
                 matches.add(LocationContainer(position, match))
@@ -64,10 +63,10 @@ class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
         Operations.complete(regionVisitor)
         if (matches.isNotEmpty()) {
             searchResults[player.uniqueId] = matches
-            page(BukkitAdapter.adapt(player), 1)
+            page(player.bukkit(), 1)
         } else {
             searchResults.remove(player.uniqueId)
-            player.printInfo(TextComponent.of("No results found."))
+            player.info("No results found.")
         }
     }
 
@@ -76,30 +75,26 @@ class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
     @Syntax("[number]")
     fun page(
         player: Player,
-        page: Int
+        page: Int,
     ) {
         val results = searchResults[player.uniqueId] ?: throw RedstoneToolsException("Use //signsearch to get results")
         val paginationBox = LocationsPaginationBox(results, "Search Results", "//signsearch -p %page%")
         val component = try {
             paginationBox.create(page)
-        } catch (e: InvalidComponentException) {
+        } catch (_: InvalidComponentException) {
             throw RedstoneToolsException("Invalid page number.")
         }
-        BukkitAdapter.adapt(player).print(component)
+        player.we().print(component)
     }
 
     private fun parseMatch(baseBlock: BaseBlock, pattern: Pattern): TextComponent? {
-        val compoundTag = baseBlock.nbtData ?: return null
-        val front = (compoundTag.value["front_text"] as CompoundTag).value["messages"] as ListTag
-        val back = (compoundTag.value["back_text"] as CompoundTag).value["messages"] as ListTag
-        val messages = front.value + back.value
-        val lines = messages.map { i ->
-            val textTag = i as StringTag
-            val component = GsonComponentSerializer.gson().deserialize(textTag.value) as ATextComponent
-            component.content()
-        }
+        val nbt = baseBlock.nbt ?: return null
+        fun messages(side: String) =
+            nbt.getTag("${side}_text", compoundTag()).getListTag("messages", stringTag()).value()
 
-        return lines
+        // TODO: front/back in results
+        return (messages("front") + messages("back"))
+            .map { (GsonComponentSerializer.gson().deserialize(it.value()) as ATextComponent).content() }
             .mapIndexedNotNull { index, line ->
                 line
                     .findFirstMatch(pattern)
@@ -115,6 +110,18 @@ class SignSearch(private val worldEdit: WorldEdit) : BaseCommand() {
 //            .ifEmpty { lines.joinToString("\n").findAll(pattern) }
     }
 }
+
+private fun String.withHighlightedReplacement(replacement: String): TextComponent =
+    TextComponent.of(this.substringBefore(replacement))
+        .color(TextColor.WHITE)
+        .append(
+            TextComponent.of(replacement)
+                .color(TextColor.YELLOW)
+        )
+        .append(
+            TextComponent.of(this.substringAfter(replacement))
+                .color(TextColor.WHITE)
+        )
 
 private data class Match(val text: String, val start: Int, val end: Int)
 

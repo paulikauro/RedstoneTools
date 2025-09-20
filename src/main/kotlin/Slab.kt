@@ -4,7 +4,6 @@ import co.aikar.commands.BaseCommand
 import co.aikar.commands.BukkitCommandCompletionContext
 import co.aikar.commands.CommandCompletions
 import co.aikar.commands.annotation.*
-import de.tr7zw.nbtapi.NBTItem
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
 import org.bukkit.block.data.type.Slab
@@ -35,7 +34,7 @@ class Slab : BaseCommand() {
             if (slab != null) {
                 player.inventory.setItemInMainHand(slab)
             } else {
-                // kinda bad but it shouldn't be null
+                // kinda bad, but it shouldn't be null
                 player.inventory.addItem(getSlab(Material.SMOOTH_STONE_SLAB.toString())!!)
             }
         }
@@ -51,8 +50,9 @@ class Slab : BaseCommand() {
             setBlockData(blockData)
             displayName(Component.text("Upside Down Slab"))
             lore(listOf(Component.text("UpsiDownORE")))
+            setEnchantmentGlintOverride(true)
         }
-        return itemStack.modifyNBT { addFakeEnchant() }
+        return itemStack
     }
 }
 
