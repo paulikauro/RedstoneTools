@@ -5,9 +5,6 @@ import co.aikar.commands.annotation.*
 import com.google.re2j.Matcher
 import com.google.re2j.Pattern
 import com.google.re2j.PatternSyntaxException
-import com.sk89q.jnbt.CompoundTag
-import com.sk89q.jnbt.ListTag
-import com.sk89q.jnbt.StringTag
 import com.sk89q.worldedit.function.RegionFunction
 import com.sk89q.worldedit.function.RegionMaskingFilter
 import com.sk89q.worldedit.function.mask.BlockCategoryMask
@@ -22,6 +19,8 @@ import com.sk89q.worldedit.world.block.BlockCategories
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.entity.Player
+import org.enginehub.linbus.tree.LinTagType.compoundTag
+import org.enginehub.linbus.tree.LinTagType.stringTag
 import java.util.*
 
 fun PluginScope.createSignSearch() {
@@ -56,8 +55,7 @@ private class SignSearch(private val searchResults: MutableMap<UUID, List<Locati
         val matches = mutableListOf<LocationContainer>()
         // selection's world is never null when given from the command context
         val world = selection.world!!
-        // BlockCategories.ALL_SIGNS when WorldEdit update
-        val blockMask = BlockCategoryMask(world, BlockCategories.get("minecraft:all_signs"))
+        val blockMask = BlockCategoryMask(world, BlockCategories.ALL_SIGNS)
         val regionFunction = RegionFunction { position ->
             val baseBlock = world.getFullBlock(position)
             val match = parseMatch(baseBlock, pattern)
@@ -96,13 +94,13 @@ private class SignSearch(private val searchResults: MutableMap<UUID, List<Locati
     }
 
     private fun parseMatch(baseBlock: BaseBlock, pattern: Pattern): TextComponent? {
-        val compoundTag = baseBlock.nbtData ?: return null
-        val front = (compoundTag.value["front_text"] as CompoundTag).value["messages"] as ListTag
-        val back = (compoundTag.value["back_text"] as CompoundTag).value["messages"] as ListTag
-        val messages = front.value + back.value
-        val lines = messages.map { tag -> json2plain((tag as StringTag).value) }
+        val nbt = baseBlock.nbt ?: return null
+        fun messages(side: String) =
+            nbt.getTag("${side}_text", compoundTag()).getListTag("messages", stringTag()).value()
 
-        return lines
+        // TODO: front/back in results
+        return (messages("front") + messages("back"))
+            .map { json2plain(it.value()) }
             .mapIndexedNotNull { index, line ->
                 val (didMatch, parts) = line.splitMap(pattern, noMatch = TextComponent::of) { matcher ->
                     val m = matcher.group()

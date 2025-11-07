@@ -15,7 +15,7 @@ import com.sk89q.worldedit.util.formatting.text.event.ClickEvent
 import com.sk89q.worldedit.util.formatting.text.event.HoverEvent
 import com.sk89q.worldedit.util.formatting.text.format.TextColor
 import de.tr7zw.nbtapi.NBT
-import de.tr7zw.nbtapi.iface.ReadWriteItemNBT
+import de.tr7zw.nbtapi.iface.ReadWriteNBT
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.Component.text
@@ -59,15 +59,7 @@ inline fun <T : ItemMeta> ItemStack.modifyMeta(action: T.() -> Unit) {
     itemMeta = (itemMeta as T).apply(action)
 }
 
-fun ItemStack.modifyNBT(action: ReadWriteItemNBT.() -> Unit) = this.also { NBT.modify(this, action) }
-
-fun ReadWriteItemNBT.addFakeEnchant() {
-    getCompoundList("Enchantments").addCompound().apply {
-        setString("id", "minecraft:knockback")
-        setShort("lvl", 1.toShort())
-    }
-    setInteger("HideFlags", 1)
-}
+fun ItemStack.modifyComponents(action: ReadWriteNBT.() -> Unit) = this.also { NBT.modifyComponents(this, action) }
 
 fun parseMaskOrThrow(arg: String, worldEdit: WorldEdit, localSession: LocalSession?, player: WEPlayer?): Mask {
     val parserContext = ParserContext().apply {
@@ -81,7 +73,7 @@ fun parseMaskOrThrow(arg: String, worldEdit: WorldEdit, localSession: LocalSessi
 }
 
 fun LocalSession.getSelectionOrNull(): Region? = try {
-    getSelection(selectionWorld ?: throw IncompleteRegionException())
+    selection
 } catch (_: IncompleteRegionException) {
     null
 }
@@ -119,11 +111,13 @@ fun PluginScope.registerWECommandContexts(worldEdit: WorldEdit) = commandManager
     }
 }
 
-private class MaskCompletionHandler(worldEdit: WorldEdit) :
+private class MaskCompletionHandler(private val worldEdit: WorldEdit) :
     CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
-    private val maskFactory = worldEdit.maskFactory
     override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> =
-        maskFactory.getSuggestions(context.input)
+        worldEdit.maskFactory.getSuggestions(
+            context.input,
+            ParserContext().apply { actor = BukkitAdapter.adapt(context.player) }
+        )
 }
 
 data class LocationContainer(val location: BlockVector3, val match: TextComponent)
@@ -140,7 +134,7 @@ class LocationsPaginationBox(private val locations: List<LocationContainer>, tit
         return TextComponent.of("${number + 1}: ")
             .append(locations[number].match)
             .color(TextColor.LIGHT_PURPLE)
-            .clickEvent(locations[number].location.run { ClickEvent.runCommand("/tp $x $y $z") })
+            .clickEvent(locations[number].location.run { ClickEvent.runCommand("/tp ${x()} ${y()} ${z()}") })
             .hoverEvent(HoverEvent.showText(TextComponent.of("Click to teleport")))
     }
 

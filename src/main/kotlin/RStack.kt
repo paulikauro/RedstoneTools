@@ -147,4 +147,4 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
 }
 
 private val BlockVector3.isUpright: Boolean
-    get() = x == 0 && z == 0
+    get() = x() == 0 && z() == 0

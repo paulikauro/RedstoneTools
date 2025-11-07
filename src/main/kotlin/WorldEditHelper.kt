@@ -48,7 +48,7 @@ private class WorldEditHelper(plugin: Plugin, private val worldEdit: WorldEdit) 
         }
         val pos1 = selection.boundingBox.pos1
         val pos2 = selection.boundingBox.pos2
-        fun BlockVector3.format() = arrayOf(blockX, blockY, blockZ).map { "$it"[GRAY] }
+        fun BlockVector3.format() = arrayOf(x(), y(), z()).map { "$it"[GRAY] }
             .join(separator(","[GRAY]))
 
         val lines = buildList {

@@ -63,8 +63,9 @@ private class Slab : BaseCommand(), Listener {
             setBlockData(blockData)
             displayName(Component.text("Upside Down Slab"))
             lore(listOf(Component.text("UpsiDownORE")))
+            setEnchantmentGlintOverride(true)
         }
-        return itemStack.modifyNBT { addFakeEnchant() }
+        return itemStack
     }
 
     @EventHandler(ignoreCancelled = true)
