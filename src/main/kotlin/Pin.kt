@@ -6,6 +6,7 @@ import co.aikar.commands.CommandCompletions
 import co.aikar.commands.CommandHelp
 import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.bukkit.BukkitAdapter
+import com.sk89q.worldedit.util.SideEffect
 import com.sk89q.worldedit.util.SideEffectSet
 import org.bukkit.Location
 import org.bukkit.Material
@@ -64,18 +65,21 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
     ): PinStateResult {
         val block = location.block
         val lever = block.blockData as? Switch ?: return PinStateResult.PinDestroyed
+        val originalLever = lever.clone()
         val newState = f(PinState(lever.isPowered))
         lever.isPowered = newState.value
         block.setBlockData(lever, true)
 
         val attachedTo = block.getRelative(lever.attachedBlockFace.oppositeFace)
         val weWorld = BukkitAdapter.adapt(block.world)
-        val effects = SideEffectSet.defaults()
-        weWorld.applySideEffects(location.toBlockVector3(), BukkitAdapter.adapt(lever), effects)
+        val effects = SideEffectSet.none()
+            .with(SideEffect.UPDATE, SideEffect.State.ON)
+            .with(SideEffect.NEIGHBORS, SideEffect.State.ON)
+        weWorld.applySideEffects(location.toBlockVector3(), BukkitAdapter.adapt(originalLever), effects)
         weWorld.applySideEffects(
             attachedTo.location.toBlockVector3(),
             BukkitAdapter.adapt(attachedTo.blockData),
-            effects
+            effects,
         )
         return PinStateResult.OK(newState)
     }
