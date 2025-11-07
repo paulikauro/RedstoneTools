@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = "io.github.paulikauro.redstonetools"
-version = "1.5.1"
+version = "1.5.2-SNAPSHOT"
 
 plugins {
     val kotlinVersion = "2.1.21"
