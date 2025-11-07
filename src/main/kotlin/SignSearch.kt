@@ -5,6 +5,7 @@ import co.aikar.commands.annotation.*
 import com.google.re2j.Matcher
 import com.google.re2j.Pattern
 import com.google.re2j.PatternSyntaxException
+import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.function.RegionFunction
 import com.sk89q.worldedit.function.RegionMaskingFilter
 import com.sk89q.worldedit.function.mask.BlockCategoryMask
@@ -14,13 +15,12 @@ import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.util.formatting.component.InvalidComponentException
 import com.sk89q.worldedit.util.formatting.text.TextComponent
 import com.sk89q.worldedit.util.formatting.text.format.TextColor
-import com.sk89q.worldedit.world.block.BaseBlock
 import com.sk89q.worldedit.world.block.BlockCategories
-import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+import org.bukkit.block.BlockState
+import org.bukkit.block.Sign
+import org.bukkit.block.sign.Side
 import org.bukkit.entity.Player
-import org.enginehub.linbus.tree.LinTagType.compoundTag
-import org.enginehub.linbus.tree.LinTagType.stringTag
 import java.util.*
 
 fun PluginScope.createSignSearch() {
@@ -57,8 +57,8 @@ private class SignSearch(private val searchResults: MutableMap<UUID, List<Locati
         val world = selection.world!!
         val blockMask = BlockCategoryMask(world, BlockCategories.ALL_SIGNS)
         val regionFunction = RegionFunction { position ->
-            val baseBlock = world.getFullBlock(position)
-            val match = parseMatch(baseBlock, pattern)
+            val state = BukkitAdapter.adapt(world).getBlockState(position.x(), position.y(), position.z())
+            val match = parseMatch(state, pattern)
             if (match != null) {
                 matches.add(LocationContainer(position, match))
             }
@@ -93,14 +93,13 @@ private class SignSearch(private val searchResults: MutableMap<UUID, List<Locati
         player.we().print(component)
     }
 
-    private fun parseMatch(baseBlock: BaseBlock, pattern: Pattern): TextComponent? {
-        val nbt = baseBlock.nbt ?: return null
-        fun messages(side: String) =
-            nbt.getTag("${side}_text", compoundTag()).getListTag("messages", stringTag()).value()
-
-        // TODO: front/back in results
-        return (messages("front") + messages("back"))
-            .map { json2plain(it.value()) }
+    private fun parseMatch(state: BlockState, pattern: Pattern): TextComponent? {
+        val sign = state as? Sign ?: return null
+        fun messages(side: Side) = sign
+            .getSide(side).lines()
+            .map(PlainTextComponentSerializer.plainText()::serialize)
+        // TODO: front/back in results?
+        return (messages(Side.FRONT) + messages(Side.BACK))
             .mapIndexedNotNull { index, line ->
                 val (didMatch, parts) = line.splitMap(pattern, noMatch = TextComponent::of) { matcher ->
                     val m = matcher.group()
@@ -159,7 +158,3 @@ private fun <T> String.splitMap(
     } while (i < length)
     return didMatch to result
 }
-
-private fun json2plain(json: String): String = PlainTextComponentSerializer.plainText().serialize(
-    GsonComponentSerializer.gson().deserialize(json)
-)
