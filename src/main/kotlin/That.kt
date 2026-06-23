@@ -34,7 +34,7 @@ private const val ITERATIONS_PER_BURST = 2000
 private class That(private val config: ThatConfig, private val worldEdit: WorldEdit, private val plugin: Plugin) :
     BaseCommand() {
     private val sizeLimit = config.sizeLimit
-    private val maxNsPerTick = config.maxTimePerTickMs * 1_000_000
+    private val maxNsPerTick = config.maxTimePerTickMs * 1_000_000L
 
     @Default
     @CommandCompletion("@$COMPLETION_MASK")
@@ -68,10 +68,8 @@ private class That(private val config: ThatConfig, private val worldEdit: WorldE
         }
         if (inQuotes) throw RedstoneToolsException("Unterminated quote")
         val mask = parseMaskOrThrow(maskStr, worldEdit, localSession, player)
-        val target = player.getBlockTrace(config.sizeLimit, false, mask)?.toVector()?.toBlockPoint() ?: run {
-            player.err("No build in sight!")
-            return
-        }
+        val target = player.getBlockTrace(config.sizeLimit, false, mask)?.toVector()?.toBlockPoint()
+            ?: return player.err("No build in sight!")
 
         expandRegion(target, mask, offsets).thenAccept { (region, result) ->
             when (result) {
@@ -149,34 +147,47 @@ private class That(private val config: ThatConfig, private val worldEdit: WorldE
     }
 }
 
-private const val X_BITS = 4
-private const val Y_BITS = 4
-private const val Z_BITS = 4
-private const val CHUNK_SIZE = 1 shl (X_BITS + Y_BITS + Z_BITS)
+internal class BlockSet {
+    companion object {
+        // See also BlockSetTests for constraints on the bit sizes
+        // How many least significant bits to take from each axis for a chunk?
+        internal const val X_OFFSET_BITS = 4
+        internal const val Z_OFFSET_BITS = 4
+        internal const val Y_OFFSET_BITS = 4
 
-private class BlockSet {
-    private val map = HashMap<Long, BitSet>()
-    private fun bitSet(v: BlockVector3): BitSet {
-        val yRestBits = 9 - Y_BITS
-        val x = (v.x() ushr X_BITS).toLong() shl (32 - Z_BITS + yRestBits)
-        val z = (v.z() ushr Z_BITS).toLong() shl yRestBits
-        val y = ((v.y() ushr Y_BITS) and ((1 shl yRestBits) - 1)).toLong()
-        val key = x or z or y
-        return map.getOrPut(key) { BitSet(CHUNK_SIZE) }
+        // How many bits for the chunk id?
+        internal const val X_CHUNK_BITS = 24
+        internal const val Z_CHUNK_BITS = 24
+        internal const val Y_CHUNK_BITS = 16
+
+        private const val OFFSET_BITS = X_OFFSET_BITS + Z_OFFSET_BITS + Y_OFFSET_BITS
+
     }
 
-    private fun bit(v: BlockVector3): Int {
-        val x = v.x() and ((1 shl X_BITS) - 1)
-        val y = (v.y() and ((1 shl Y_BITS) - 1)) shl X_BITS
-        val z = (v.z() and ((1 shl Z_BITS) - 1)) shl (X_BITS + Y_BITS)
+    private val map = HashMap<Long, BitSet>()
+    private fun bitSetOfChunk(v: BlockVector3): BitSet {
+        val chunkX = v.x().bits(X_OFFSET_BITS, X_CHUNK_BITS)
+        val chunkZ = v.z().bits(Z_OFFSET_BITS, Z_CHUNK_BITS) shl X_CHUNK_BITS
+        val chunkY = v.y().bits(Y_OFFSET_BITS, Y_CHUNK_BITS) shl (X_CHUNK_BITS + Z_CHUNK_BITS)
+        val key = chunkX or chunkZ or chunkY
+        return map.getOrPut(key) { BitSet(1 shl OFFSET_BITS) }
+    }
+
+    private fun offsetInChunk(v: BlockVector3): Int {
+        val x = v.x() and X_OFFSET_BITS.mask
+        val z = (v.z() and Z_OFFSET_BITS.mask) shl X_OFFSET_BITS
+        val y = (v.y() and Y_OFFSET_BITS.mask) shl (X_OFFSET_BITS + Z_OFFSET_BITS)
         return x or y or z
     }
 
     fun add(v: BlockVector3) {
-        bitSet(v).set(bit(v))
+        bitSetOfChunk(v).set(offsetInChunk(v))
     }
 
-    operator fun contains(v: BlockVector3): Boolean = bitSet(v).get(bit(v))
+    operator fun contains(v: BlockVector3): Boolean = bitSetOfChunk(v).get(offsetInChunk(v))
+
+    private inline val Int.mask: Int get() = (1 shl this) - 1
+    private inline fun Int.bits(start: Int, len: Int): Long = ((this ushr start) and len.mask).toUInt().toLong()
 }
 
 private object Offsets {

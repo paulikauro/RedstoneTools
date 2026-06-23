@@ -7,6 +7,7 @@ version = "1.5.2-SNAPSHOT"
 plugins {
     val kotlinVersion = "2.4.0"
     kotlin("jvm") version kotlinVersion
+    kotlin("plugin.power-assert") version kotlinVersion
     id("com.gradleup.shadow") version "9.4.2"
     id("de.eldoria.plugin-yml.bukkit") version "0.7.1"
     id("io.papermc.paperweight.userdev") version "2.0.0-beta.21"
@@ -27,6 +28,10 @@ dependencies {
     compileOnly("de.tr7zw:item-nbt-api-plugin:2.15.0")
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.11-SNAPSHOT")
     paperweight.paperDevBundle("1.21.8-R0.1-SNAPSHOT")
+
+    testImplementation(platform("org.junit:junit-bom:6.1.0"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 bukkit {
@@ -52,7 +57,7 @@ tasks.withType<KotlinCompile> {
 }
 
 tasks.withType<Test> {
-    failOnNoDiscoveredTests = false
+    useJUnitPlatform()
 }
 
 tasks.build {
