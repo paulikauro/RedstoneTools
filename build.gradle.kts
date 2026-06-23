@@ -5,10 +5,11 @@ group = "io.github.paulikauro.redstonetools"
 version = "1.5.2-SNAPSHOT"
 
 plugins {
-    val kotlinVersion = "2.1.21"
+    val kotlinVersion = "2.4.0"
     kotlin("jvm") version kotlinVersion
-    id("com.gradleup.shadow") version "8.3.6"
+    id("com.gradleup.shadow") version "9.4.2"
     id("de.eldoria.plugin-yml.bukkit") version "0.7.1"
+    id("io.papermc.paperweight.userdev") version "2.0.0-beta.21"
 }
 
 repositories {
@@ -24,8 +25,8 @@ dependencies {
     implementation("net.kyori:adventure-extra-kotlin:4.16.0")
 
     compileOnly("de.tr7zw:item-nbt-api-plugin:2.15.0")
-    compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.11-SNAPSHOT")
+    paperweight.paperDevBundle("1.21.8-R0.1-SNAPSHOT")
 }
 
 bukkit {
@@ -39,11 +40,19 @@ tasks.shadowJar {
     relocate("co.aikar.locales", "io.github.paulikauro.redstonetools.acf.locales")
 }
 
+java {
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
 tasks.withType<KotlinCompile> {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_21)
         javaParameters = true
     }
+}
+
+tasks.withType<Test> {
+    failOnNoDiscoveredTests = false
 }
 
 tasks.build {

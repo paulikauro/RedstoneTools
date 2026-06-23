@@ -5,14 +5,17 @@ import co.aikar.commands.BukkitCommandCompletionContext
 import co.aikar.commands.CommandCompletions
 import co.aikar.commands.CommandHelp
 import co.aikar.commands.annotation.*
-import com.sk89q.worldedit.bukkit.BukkitAdapter
-import com.sk89q.worldedit.util.SideEffect
-import com.sk89q.worldedit.util.SideEffectSet
+import net.minecraft.core.Direction
+import net.minecraft.world.InteractionHand
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.phys.BlockHitResult
+import net.minecraft.world.phys.Vec3
 import org.bukkit.Location
 import org.bukkit.Material
-import org.bukkit.block.BlockFace
-import org.bukkit.block.data.FaceAttachable
 import org.bukkit.block.data.type.Switch
+import org.bukkit.craftbukkit.CraftWorld
+import org.bukkit.craftbukkit.block.CraftBlock
+import org.bukkit.craftbukkit.entity.CraftPlayer
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
@@ -44,43 +47,39 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
 
     private val pins = mutableMapOf<Pair<UUID, String>, Pin>()
 
-    private val Switch.attachedBlockFace: BlockFace
-        get() = when (attachedFace) {
-            FaceAttachable.AttachedFace.CEILING -> BlockFace.DOWN
-            FaceAttachable.AttachedFace.FLOOR -> BlockFace.UP
-            FaceAttachable.AttachedFace.WALL -> facing
-        }
-
     sealed interface PinStateResult {
         data object PinDestroyed : PinStateResult
         data class OK(val newState: PinState) : PinStateResult
+        data object Fail : PinStateResult
     }
 
     private fun Pin.setState(
-        newState: PinState,
-    ): PinStateResult = modifyState { newState }
+        player: Player, newState: PinState,
+    ): PinStateResult = modifyState(player) { newState }
 
     private fun Pin.modifyState(
+        player: Player,
         f: (PinState) -> PinState,
     ): PinStateResult {
         val block = location.block
         val lever = block.blockData as? Switch ?: return PinStateResult.PinDestroyed
-        val originalLever = lever.clone()
         val newState = f(PinState(lever.isPowered))
-        lever.isPowered = newState.value
-        block.setBlockData(lever, true)
-
-        val attachedTo = block.getRelative(lever.attachedBlockFace.oppositeFace)
-        val weWorld = BukkitAdapter.adapt(block.world)
-        val effects = SideEffectSet.none()
-            .with(SideEffect.UPDATE, SideEffect.State.ON)
-            .with(SideEffect.NEIGHBORS, SideEffect.State.ON)
-        weWorld.applySideEffects(location.toBlockVector3(), BukkitAdapter.adapt(originalLever), effects)
-        weWorld.applySideEffects(
-            attachedTo.location.toBlockVector3(),
-            BukkitAdapter.adapt(attachedTo.blockData),
-            effects,
-        )
+        val level = (location.world as CraftWorld).handle
+        val pos = (block as CraftBlock).position
+        val nmsPlayer = (player as CraftPlayer).handle
+        if (lever.isPowered != newState.value) {
+            // spawn protection & world border
+            if (!level.mayInteract(nmsPlayer, pos)) {
+                return PinStateResult.Fail
+            }
+            nmsPlayer.gameMode.useItemOn(
+                nmsPlayer, level, ItemStack.EMPTY, InteractionHand.MAIN_HAND,
+                BlockHitResult(
+                    Vec3.atCenterOf(pos),
+                    Direction.DOWN, pos, true,
+                ),
+            )
+        }
         return PinStateResult.OK(newState)
     }
 
@@ -156,8 +155,9 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
             player.info("No pin named $name")
             return
         }
-        when (pin.setState(newState)) {
+        when (pin.setState(player, newState)) {
             is PinStateResult.OK -> "Turned $name $newState"
+            is PinStateResult.Fail -> "Fail $name"
             is PinStateResult.PinDestroyed -> "Pin $name has been destroyed!"
         }.let(player::info)
     }
@@ -167,7 +167,7 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @CommandPermission("redstonetools.pin.pulse")
     @CommandCompletion("@pin_state @$COMPLETION_PINS @range:1-100")
     fun pulse(player: Player, state: PinState, name: String, time: Int) {
-        if (time < 1 || time > 100) {
+        if (time !in 1..100) {
             player.info("Time must be between 1 and 100 ticks (inclusive)!")
             return
         }
@@ -175,8 +175,13 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
             player.info("No pin named $name")
             return
         }
-        when (pin.setState(state)) {
+        when (pin.setState(player, state)) {
             is PinStateResult.OK -> {}
+            is PinStateResult.Fail -> {
+                player.info("Fail $name")
+                return
+            }
+
             is PinStateResult.PinDestroyed -> {
                 player.info("Pin $name has been destroyed!")
                 return
@@ -184,8 +189,12 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
         }
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
             // todo factor out
-            when (pin.setState(state.not())) {
+            when (pin.setState(player, state.not())) {
                 is PinStateResult.OK -> {}
+                is PinStateResult.Fail -> {
+                    player.info("Fail $name")
+                }
+
                 is PinStateResult.PinDestroyed -> {
                     player.info("Pin $name has been destroyed!")
                 }
@@ -203,8 +212,9 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
             return
         }
 
-        when (val result = pin.modifyState(PinState::not)) {
+        when (val result = pin.modifyState(player, PinState::not)) {
             is PinStateResult.OK -> "Toggled $name to ${result.newState}"
+            is PinStateResult.Fail -> "Fail $name"
             is PinStateResult.PinDestroyed -> "Pin $name has been destroyed!"
         }.let(player::info)
     }
