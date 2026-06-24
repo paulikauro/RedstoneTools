@@ -2,6 +2,7 @@ package io.github.paulikauro.redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.ConditionFailedException
+import co.aikar.commands.InvalidCommandArgument
 import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.UnknownDirectionException
@@ -14,19 +15,21 @@ import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.math.transform.AffineTransform
 import com.sk89q.worldedit.regions.Region
 import com.sk89q.worldedit.util.Direction
-import java.lang.Integer.parseInt
 import kotlin.math.abs
 
 fun PluginScope.createRStack(worldEdit: WorldEdit) {
     commandManager.registerCommand(RStack(worldEdit))
 }
 
+private const val DEFAULT_COUNT = 1
+private const val DEFAULT_SPACING = 2
+
 @CommandAlias("/rstack|/rs")
 @Description("Redstone stacking command")
 @CommandPermission("redstonetools.rstack")
 private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
     @Default
-    @Syntax("[-e] [direction] [count] [spacing]")
+    @Syntax("[-ew] [count] ([direction] [spacing] | [spacing vector])")
     fun rstack(
         player: WEPlayer,
         session: LocalSession,
@@ -35,56 +38,77 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
     ) {
         var expand = false
         var withAir = false
-        var direction: String? = null
-        val numbers = mutableListOf<Int>()
+        var directionVec: BlockVector3? = null
+        var directionStr: String? = null
+        var count: Int? = null
+        var spacing: Int? = null
         for (arg in args) {
+            val int = arg.toIntOrNull()
             when {
-                // don't care about duplicate flags
-                arg == "-e" -> expand = true
-                arg == "-w" -> withAir = true
-                arg.all { it.isDigit() || it in "+-" } -> numbers.add(parseInt(arg))
+                int != null -> when {
+                    count == null -> count = int
+                    spacing == null -> spacing = int
+                    else -> throw InvalidCommandArgument("Too many arguments!")
+                }
+
+                arg.all { it.isDigit() || it in "-," } -> {
+                    // probably a direction vector
+                    if (directionVec != null) throw InvalidCommandArgument("Too many arguments!")
+                    directionVec = parseBlockVec(arg)
+                }
+
+                arg.startsWith('-') -> {
+                    for (flag in arg.drop(1)) {
+                        when (flag) {
+                            'e' -> expand = true
+                            'w' -> withAir = true
+                            else -> throw InvalidCommandArgument("Unknown flag: -$flag")
+                        }
+                    }
+                }
+
                 else -> {
                     // probably a direction string
-                    if (direction != null) {
-                        throw ConditionFailedException("Too many arguments!")
-                    }
-                    direction = arg
+                    if (directionStr != null) throw InvalidCommandArgument("Too many arguments!")
+                    directionStr = arg
                 }
             }
         }
-        if (numbers.size > 2) {
-            throw ConditionFailedException("Too many arguments!")
+        if (directionVec == null) {
+            directionVec = directionVectorFor(player, directionStr ?: "me").multiply(spacing ?: DEFAULT_SPACING)
+        } else if (directionStr != null || spacing != null) {
+            throw InvalidCommandArgument("Direction or spacing cannot be used with direction vector")
         }
-        var count = numbers.getOrNull(0) ?: 1
-        var spacing = numbers.getOrNull(1) ?: 2
+        count = count ?: DEFAULT_COUNT
         if (count < 0) {
             count *= -1
-            spacing *= -1
+            directionVec = directionVec.multiply(-1)
         }
-        try {
-            doStack(player, session, selection, count, spacing, expand, withAir, direction ?: "me")
-        } catch (_: UnknownDirectionException) {
-            throw ConditionFailedException("Unknown direction")
-        }
+        doStack(player, session, selection, count, directionVec, expand, withAir)
     }
 
-    // throws UnknownDirectionException
+    private fun parseBlockVec(arg: String): BlockVector3 {
+        val parts = arg.split(',')
+        if (parts.size != 3)
+            throw InvalidCommandArgument("Direction vector should have 3 coordinates, got ${parts.size}")
+        return parts.map { it.toIntOrNull() ?: throw InvalidCommandArgument("Cannot parse coordinate: $it") }
+            .let { (x, y, z) -> BlockVector3.at(x, y, z) }
+    }
+
     private fun doStack(
         player: WEPlayer,
         session: LocalSession,
         selection: Region,
         count: Int,
-        spacing: Int,
+        spacing: BlockVector3,
         expand: Boolean,
         withAir: Boolean,
-        direction: String,
     ): Int {
-        val spacingVec = directionVectorFor(player, direction).multiply(spacing)
         val affected = try {
             session.createEditSession(player).use { editSession ->
                 val copy = ForwardExtentCopy(editSession, selection, editSession, selection.minimumPoint).apply {
                     repetitions = count
-                    transform = AffineTransform().translate(spacingVec)
+                    transform = AffineTransform().translate(spacing)
                     isCopyingBiomes = false
                     isCopyingEntities = false
                     isRemovingEntities = false
@@ -102,7 +126,7 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         }
         player.info("Operation completed, $affected blocks affected")
         if (expand) {
-            expandSelection(selection, spacingVec.multiply(count), session, player)
+            expandSelection(selection, spacing.multiply(count), session, player)
         }
         return affected
     }
@@ -115,7 +139,6 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         }
     }
 
-    // throws UnknownDirectionException
     private fun directionVectorFor(player: WEPlayer, direction: String): BlockVector3 {
         // TODO: clean this up
         val pitch = when {
@@ -125,7 +148,11 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
             isDiagDirStr(direction, 'd') -> 25.0f
             else -> 0.0f
         }
-        val vec = worldEdit.getDiagonalDirection(player, direction)
+        val vec = try {
+            worldEdit.getDiagonalDirection(player, direction)
+        } catch (_: UnknownDirectionException) {
+            throw InvalidCommandArgument("Unknown direction: $direction")
+        }
         if (vec.isUpright || abs(pitch) <= 22.5) {
             // horizontal or vertical direction
             return vec

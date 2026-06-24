@@ -15,19 +15,22 @@ Like WorldEdit's `//stack`, but
 - supports more directions, in particular ones used in diagonal building orientations
 - has a flag for expanding the selection to cover the whole stacked area
 
-Usage: `//rstack [-e] [-w] [direction] [count] [spacing]`
+Usage: `//rstack [-ew] [count] ([direction] [spacing] | [spacing vector])`
 
 - `-e`: when specified, the selection is expanded
 - `-w` ("with air"): when specified, **stacked copies may not overlap** (corresponds to omitting `-a` from WorldEdit
   commands)
+- `count`: how many copies to stack. Defaults to 1.
 - `direction`: the usual WorldEdit directions. Additionally, `u` or `d` may be appended to
   most directions to get a diagonal (in the y-axis) direction. Defaults to `me`
   (whatever direction you're looking at)
-- `count`: how many copies to stack. Defaults to 1.
 - `spacing`: how far apart copies should be stacked. Defaults to 2 due to that being
   common in redstoning.
+- `spacing vector`: Instead of `direction` and `spacing`, an explicit spacing vector of the form `dx,dy,dz` may be
+  provided. The coordinates are relative to the world's coordinate axes, not the player's orientation.
 
-NOTE: The order of arguments does not matter apart from `count` and `spacing`.
+NOTE: The order of arguments is quite free. The only constraint is that `count` should precede `spacing` whenever both
+are used.
 
 ## `//that [mask] [-d|-dd|-ddd]`
 
