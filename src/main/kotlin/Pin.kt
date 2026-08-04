@@ -87,6 +87,9 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
         }
     }
 
+    fun requirePin(player: Player, name: String) =
+        pins[player.uniqueId to name] ?: throw RedstoneToolsException("No pin named $name")
+
     @HelpCommand
     fun help(help: CommandHelp) {
         help.showHelp()
@@ -144,10 +147,7 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @CommandPermission("redstonetools.pin.turn")
     @CommandCompletion("@pin_state @$COMPLETION_PINS")
     fun turn(player: Player, newState: PinState, name: String) {
-        val pin = pins[player.uniqueId to name] ?: run {
-            player.info("No pin named $name")
-            return
-        }
+        val pin = requirePin(player, name)
         pin.setState(player, newState)
         player.info("Turned $name $newState")
     }
@@ -161,10 +161,7 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
             player.info("Time must be between 1 and 100 ticks (inclusive)!")
             return
         }
-        val pin = pins[player.uniqueId to name] ?: run {
-            player.info("No pin named $name")
-            return
-        }
+        val pin = requirePin(player, name)
         pin.setState(player, state)
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
             // refresh player object
@@ -183,11 +180,7 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @CommandPermission("redstonetools.pin.toggle")
     @CommandCompletion("@$COMPLETION_PINS")
     fun toggle(player: Player, name: String) {
-        val pin = pins[player.uniqueId to name] ?: run {
-            player.info("No pin named $name")
-            return
-        }
-
+        val pin = requirePin(player, name)
         val newState = pin.modifyState(player, PinState::not)
         player.info("Toggled $name to $newState")
     }
