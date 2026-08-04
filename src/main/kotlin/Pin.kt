@@ -49,22 +49,26 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
         val block = location.block
         val lever = block.blockData as? Switch ?: throw RedstoneToolsException("No lever at pin location!")
         val newState = f(PinState(lever.isPowered))
+        if (lever.isPowered == newState.value) return newState
+
         val level = (location.world as CraftWorld).handle
         val pos = (block as CraftBlock).position
         val nmsPlayer = (player as CraftPlayer).handle
-        if (lever.isPowered != newState.value) {
-            // spawn protection & world border
-            if (!level.mayInteract(nmsPlayer, pos)) {
-                throw RedstoneToolsException("No access to pin location!")
-            }
-            nmsPlayer.gameMode.useItemOn(
-                nmsPlayer, level, ItemStack.EMPTY, InteractionHand.MAIN_HAND,
-                BlockHitResult(
-                    Vec3.atCenterOf(pos),
-                    Direction.DOWN, pos, true,
-                ),
-            )
+        // spawn protection & world border
+        if (!level.mayInteract(nmsPlayer, pos)) {
+            throw RedstoneToolsException("No access to pin location!")
         }
+        nmsPlayer.gameMode.useItemOn(
+            nmsPlayer, level, ItemStack.EMPTY, InteractionHand.MAIN_HAND,
+            BlockHitResult(
+                Vec3.atCenterOf(pos),
+                Direction.DOWN, pos, true,
+            ),
+        )
+
+        // useItemOn doesn't return anything useful in case the Paper event is canceled, so we need to do this...
+        val actualState = (block.blockData as Switch).isPowered
+        if (newState.value != actualState) throw RedstoneToolsException("Failed to modify pin state")
         return newState
     }
 
@@ -216,9 +220,8 @@ private class BlockListener : Listener {
         players.remove(event.player.uniqueId)
     }
 
-    // TODO: permission check? is it needed elsewhere?
-    // it checks for cancellation now to address that ^
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    // ignore canceled events to account for permissions
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     fun onBlockBreak(event: BlockBreakEvent) {
         val handler = players.remove(event.player.uniqueId) ?: return
         event.isCancelled = true
