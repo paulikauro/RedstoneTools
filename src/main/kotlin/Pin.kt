@@ -47,22 +47,15 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
 
     private val pins = mutableMapOf<Pair<UUID, String>, Pin>()
 
-    sealed interface PinStateResult {
-        data object PinDestroyed : PinStateResult
-        data class OK(val newState: PinState) : PinStateResult
-        data object Fail : PinStateResult
+    private fun Pin.setState(player: Player, newState: PinState) {
+        modifyState(player) { newState }
     }
 
-    private fun Pin.setState(
-        player: Player, newState: PinState,
-    ): PinStateResult = modifyState(player) { newState }
-
-    private fun Pin.modifyState(
-        player: Player,
-        f: (PinState) -> PinState,
-    ): PinStateResult {
+    private val PIN_DESTROYED = RedstoneToolsException("No lever at pin location!")
+    private val NO_ACCESS = RedstoneToolsException("No access to pin location!")
+    private fun Pin.modifyState(player: Player, f: (PinState) -> PinState): PinState {
         val block = location.block
-        val lever = block.blockData as? Switch ?: return PinStateResult.PinDestroyed
+        val lever = block.blockData as? Switch ?: throw PIN_DESTROYED
         val newState = f(PinState(lever.isPowered))
         val level = (location.world as CraftWorld).handle
         val pos = (block as CraftBlock).position
@@ -70,7 +63,7 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
         if (lever.isPowered != newState.value) {
             // spawn protection & world border
             if (!level.mayInteract(nmsPlayer, pos)) {
-                return PinStateResult.Fail
+                throw NO_ACCESS
             }
             nmsPlayer.gameMode.useItemOn(
                 nmsPlayer, level, ItemStack.EMPTY, InteractionHand.MAIN_HAND,
@@ -80,7 +73,7 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
                 ),
             )
         }
-        return PinStateResult.OK(newState)
+        return newState
     }
 
     val listener: Listener
@@ -155,11 +148,8 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
             player.info("No pin named $name")
             return
         }
-        when (pin.setState(player, newState)) {
-            is PinStateResult.OK -> "Turned $name $newState"
-            is PinStateResult.Fail -> "Fail $name"
-            is PinStateResult.PinDestroyed -> "Pin $name has been destroyed!"
-        }.let(player::info)
+        pin.setState(player, newState)
+        player.info("Turned $name $newState")
     }
 
     @Subcommand("pulse")
@@ -175,29 +165,15 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
             player.info("No pin named $name")
             return
         }
-        when (pin.setState(player, state)) {
-            is PinStateResult.OK -> {}
-            is PinStateResult.Fail -> {
-                player.info("Fail $name")
-                return
-            }
-
-            is PinStateResult.PinDestroyed -> {
-                player.info("Pin $name has been destroyed!")
-                return
-            }
-        }
+        pin.setState(player, state)
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
-            // todo factor out
-            when (pin.setState(player, state.not())) {
-                is PinStateResult.OK -> {}
-                is PinStateResult.Fail -> {
-                    player.info("Fail $name")
-                }
-
-                is PinStateResult.PinDestroyed -> {
-                    player.info("Pin $name has been destroyed!")
-                }
+            // refresh player object
+            // not ideal to just return if player not found, but it's the safest from a permissions point of view
+            val player = plugin.server.getPlayer(player.uniqueId) ?: return@Runnable
+            try {
+                pin.setState(player, state.not())
+            } catch (e: RedstoneToolsException) {
+                player.err(e.message)
             }
         }, time * 2L)
     }
@@ -212,11 +188,8 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
             return
         }
 
-        when (val result = pin.modifyState(player, PinState::not)) {
-            is PinStateResult.OK -> "Toggled $name to ${result.newState}"
-            is PinStateResult.Fail -> "Fail $name"
-            is PinStateResult.PinDestroyed -> "Pin $name has been destroyed!"
-        }.let(player::info)
+        val newState = pin.modifyState(player, PinState::not)
+        player.info("Toggled $name to $newState")
     }
 }
 
