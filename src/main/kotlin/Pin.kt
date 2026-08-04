@@ -43,19 +43,11 @@ private const val COMPLETION_PINS = "pins"
 @CommandPermission("redstonetools.pin")
 private class PinCommand(private val plugin: Plugin) : BaseCommand() {
     // currently only input pin
-    data class Pin(val location: Location)
+    data class Pin(val name: String, val location: Location)
 
-    private val pins = mutableMapOf<Pair<UUID, String>, Pin>()
-
-    private fun Pin.setState(player: Player, newState: PinState) {
-        modifyState(player) { newState }
-    }
-
-    private val PIN_DESTROYED = RedstoneToolsException("No lever at pin location!")
-    private val NO_ACCESS = RedstoneToolsException("No access to pin location!")
     private fun Pin.modifyState(player: Player, f: (PinState) -> PinState): PinState {
         val block = location.block
-        val lever = block.blockData as? Switch ?: throw PIN_DESTROYED
+        val lever = block.blockData as? Switch ?: throw RedstoneToolsException("No lever at pin location!")
         val newState = f(PinState(lever.isPowered))
         val level = (location.world as CraftWorld).handle
         val pos = (block as CraftBlock).position
@@ -63,7 +55,7 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
         if (lever.isPowered != newState.value) {
             // spawn protection & world border
             if (!level.mayInteract(nmsPlayer, pos)) {
-                throw NO_ACCESS
+                throw RedstoneToolsException("No access to pin location!")
             }
             nmsPlayer.gameMode.useItemOn(
                 nmsPlayer, level, ItemStack.EMPTY, InteractionHand.MAIN_HAND,
@@ -79,16 +71,32 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
     val listener: Listener
         field = BlockListener()
 
-    inner class CompletionHandler :
-        CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
-        override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> {
-            val player = context.sender as Player
-            return pins.keys.filter { (uuid, _) -> uuid == player.uniqueId }.map { (_, name) -> name }
-        }
+    private val pins: MutableMap<UUID, MutableMap<String, Pin>> = mutableMapOf()
+
+    private fun pinsOf(uuid: UUID): MutableMap<String, Pin> =
+        pins.computeIfAbsent(uuid) { mutableMapOf() }
+
+    private fun pinsOf(player: Player) = pinsOf(player.uniqueId)
+
+    private fun Pin.setState(player: Player, newState: PinState) {
+        modifyState(player) { newState }
     }
 
     fun requirePin(player: Player, name: String) =
-        pins[player.uniqueId to name] ?: throw RedstoneToolsException("No pin named $name")
+        pinsOf(player)[name] ?: throw RedstoneToolsException("No pin named $name")
+
+    fun requireNoPin(player: Player, name: String) {
+        if (name in pinsOf(player))
+            throw RedstoneToolsException("Pin $name already exists!")
+    }
+
+    inner class CompletionHandler :
+        CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
+        override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> {
+            val player = context.sender as? Player ?: return emptyList()
+            return pinsOf(player).keys
+        }
+    }
 
     @HelpCommand
     fun help(help: CommandHelp) {
@@ -99,11 +107,17 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @Description("List your pins")
     @CommandPermission("redstonetools.pin.list")
     fun list(player: Player) {
+        val playerPins = pinsOf(player)
+        if (playerPins.isEmpty()) {
+            player.info("You have no pins.")
+            return
+        }
         player.info("Your pins:")
-        pins
-            .filterKeys { (uuid, _) -> uuid == player.uniqueId }
-            // TODO: click to tp
-            .map { (key, value) -> "${key.second} at ${value.location.toBlockVector3()}" }
+        playerPins.values
+            .map { pin ->
+                // TODO: click to tp
+                "${pin.name} at ${pin.location.toBlockVector3()}"
+            }
             .forEach(player::info)
     }
 
@@ -111,10 +125,7 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @Description("Add a pin")
     @CommandPermission("redstonetools.pin.add")
     fun add(player: Player, name: String) {
-        if (player.uniqueId to name in pins) {
-            player.info("Pin $name already exists!")
-            return
-        }
+        requireNoPin(player, name)
         // this control flow is too backwards
         val result = listener.add(player) { event ->
             if (event.block.type != Material.LEVER) {
@@ -122,14 +133,14 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
                 player.info("That's not a lever! Restart by doing /pin add $name")
                 return@add
             }
-            pins[player.uniqueId to name] = Pin(event.block.location)
+            pinsOf(player)[name] = Pin(name, event.block.location)
             player.info("Pin $name added")
         }
         when (result) {
             // :(
-            BlockListener.BlockResult.ADDED -> "Break the lever you want added as a pin"
-            BlockListener.BlockResult.EXISTS -> "You're already adding a pin"
-        }.let(player::info)
+            BlockListener.BlockResult.ADDED -> player.info("Break the lever you want added as a pin")
+            BlockListener.BlockResult.EXISTS -> player.err("You're already adding a pin")
+        }
     }
 
     @Subcommand("remove")
@@ -137,9 +148,9 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @CommandPermission("redstonetools.pin.remove")
     @CommandCompletion("@$COMPLETION_PINS")
     fun remove(player: Player, name: String) {
-        val removed = pins.remove(player.uniqueId to name) != null
-        val message = if (removed) "Pin $name removed" else "No pin named $name"
-        player.info(message)
+        requirePin(player, name)
+        pinsOf(player).remove(name)
+        player.info("Pin $name removed")
     }
 
     @Subcommand("turn")
@@ -156,11 +167,7 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @Description("Pulse a pin")
     @CommandPermission("redstonetools.pin.pulse")
     @CommandCompletion("@pin_state @$COMPLETION_PINS @range:1-100")
-    fun pulse(player: Player, state: PinState, name: String, time: Int) {
-        if (time !in 1..100) {
-            player.info("Time must be between 1 and 100 ticks (inclusive)!")
-            return
-        }
+    fun pulse(player: Player, state: PinState, name: String, @Flags("min=1,max=100") time: Int) {
         val pin = requirePin(player, name)
         pin.setState(player, state)
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
