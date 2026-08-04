@@ -83,8 +83,8 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
         return PinStateResult.OK(newState)
     }
 
-    private val blockListener = BlockListener()
-    val listener: Listener get() = blockListener
+    val listener: Listener
+        field = BlockListener()
 
     inner class CompletionHandler :
         CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
@@ -120,7 +120,7 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
             return
         }
         // this control flow is too backwards
-        val result = blockListener.add(player) { event ->
+        val result = listener.add(player) { event ->
             if (event.block.type != Material.LEVER) {
                 // this should just ask you to try again
                 player.info("That's not a lever! Restart by doing /pin add $name")
