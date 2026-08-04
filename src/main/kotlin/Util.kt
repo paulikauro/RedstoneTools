@@ -161,7 +161,7 @@ class PluginScope(val plugin: Plugin, val commandManager: PaperCommandManager) {
     val pluginManager get() = plugin.server.pluginManager
 }
 
-class RedstoneToolsException(message: String) : Exception(message)
+class RedstoneToolsException(override val message: String) : Exception(message)
 
 interface Thing<T> {
     val readableName: String
