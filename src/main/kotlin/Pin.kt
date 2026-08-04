@@ -82,10 +82,10 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
         modifyState(player) { newState }
     }
 
-    fun requirePin(player: Player, name: String) =
+    private fun requirePin(player: Player, name: String) =
         pinsOf(player)[name] ?: throw RedstoneToolsException("No pin named $name")
 
-    fun requireNoPin(player: Player, name: String) {
+    private fun requireNoPin(player: Player, name: String) {
         if (name in pinsOf(player))
             throw RedstoneToolsException("Pin $name already exists!")
     }
