@@ -215,7 +215,7 @@ private class BlockListener : Listener {
     }
 
     // ignore canceled events to account for permissions
-    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onBlockBreak(event: BlockBreakEvent) {
         val handler = players.remove(event.player.uniqueId) ?: return
         event.isCancelled = true
