@@ -7,6 +7,8 @@ import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.UnknownDirectionException
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.function.mask.ExistingBlockMask
+import com.sk89q.worldedit.function.mask.Mask
+import com.sk89q.worldedit.function.mask.Masks
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy
 import com.sk89q.worldedit.function.operation.Operations
 import com.sk89q.worldedit.math.BlockVector3
@@ -32,16 +34,19 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         player: WEPlayer,
         session: LocalSession,
         selection: Region,
-        args: Array<String>,
+        argString: String,
     ) {
+        val args = tokenize(argString).iterator()
         var expand = false
         var shift = false
         var withAir = false
+        var mask: Mask? = null
         var directionVec: BlockVector3? = null
         var directionStr: String? = null
         var count: Int? = null
         var spacing: Int? = null
-        for (arg in args) {
+        while (args.hasNext()) {
+            val arg = args.next()
             val int = arg.toIntOrNull()
             when {
                 int != null -> when {
@@ -62,6 +67,13 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
                             'e' -> expand = true
                             's' -> shift = true
                             'w' -> withAir = true
+                            'm' -> {
+                                // inconsistent with WE in that 'm' does not have to be the last flag in a flag group
+                                // fix it later (if at all :D)
+                                if (!args.hasNext()) throw InvalidCommandArgument("Missing mask for -m")
+                                mask = parseMaskOrThrow(args.next(), worldEdit, session, player)
+                            }
+
                             else -> throw InvalidCommandArgument("Unknown flag: -$flag")
                         }
                     }
@@ -74,18 +86,31 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
                 }
             }
         }
-        if (shift && expand) throw InvalidCommandArgument("-e and -s are mutually exclusive")
+
+        val selMod = when {
+            shift && expand -> throw InvalidCommandArgument("-e and -s are mutually exclusive")
+            shift -> SelectionModification.SHIFT
+            expand -> SelectionModification.EXPAND
+            else -> null
+        }
+
+        // well, it could, it just has no effect.
+        if (mask != null && withAir) throw InvalidCommandArgument("-w cannot be used with -m")
+        mask = mask ?: if (withAir) Masks.alwaysTrue() else ExistingBlockMask(player.world)
+
         if (directionVec == null) {
             directionVec = directionVectorFor(player, directionStr ?: "me").multiply(spacing ?: DEFAULT_SPACING)
         } else if (directionStr != null || spacing != null) {
             throw InvalidCommandArgument("Direction or spacing cannot be used with direction vector")
         }
+
         count = count ?: DEFAULT_COUNT
         if (count < 0) {
             count *= -1
             directionVec = directionVec.multiply(-1)
         }
-        val affected = doStack(player, session, selection, count, directionVec, expand, shift, withAir)
+
+        val affected = doStack(player, session, selection, count, directionVec, mask, selMod)
         player.info("Operation completed, $affected blocks affected")
     }
 
@@ -97,15 +122,16 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
             .let { (x, y, z) -> BlockVector3.at(x, y, z) }
     }
 
+    enum class SelectionModification { SHIFT, EXPAND }
+
     private fun doStack(
         player: WEPlayer,
         session: LocalSession,
         selection: Region,
         count: Int,
         spacing: BlockVector3,
-        expand: Boolean,
-        shift: Boolean,
-        withAir: Boolean,
+        mask: Mask,
+        selMod: SelectionModification?,
     ): Int {
         val affected = session.createEditSession(player).use { editSession ->
             val copy = ForwardExtentCopy(editSession, selection, editSession, selection.minimumPoint).apply {
@@ -114,27 +140,23 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
                 isCopyingBiomes = false
                 isCopyingEntities = false
                 isRemovingEntities = false
-                if (!withAir) {
-                    sourceMask = ExistingBlockMask(editSession)
-                }
+                sourceMask = mask
             }
             Operations.complete(copy)
             session.remember(editSession)
             // TODO: flush block bag?
             copy.affected
         }
+        if (selMod == null) return affected
+
         val total = spacing.multiply(count)
-        if (expand) {
-            selection.expand(total)
+        when (selMod) {
+            SelectionModification.EXPAND -> selection.expand(total)
+            SelectionModification.SHIFT -> selection.shift(total)
         }
-        if (shift) {
-            selection.shift(total)
-        }
-        if (expand || shift) {
-            session.getRegionSelector(player.world).apply {
-                learnChanges()
-                explainRegionAdjust(player, session)
-            }
+        session.getRegionSelector(player.world).apply {
+            learnChanges()
+            explainRegionAdjust(player, session)
         }
         return affected
     }
@@ -175,3 +197,27 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
 
 private val BlockVector3.isUpright: Boolean
     get() = x() == 0 && z() == 0
+
+fun tokenize(line: String): List<String> {
+    val result = mutableListOf<String>()
+    var i = 0
+    val len = line.length
+    while (i < len) {
+        while (i < len && line[i] == ' ') i++
+        if (i == len) break
+        if (line[i] == '"') {
+            val j = line.indexOf("\" ", startIndex = i + 1)
+                .takeIf { it != -1 } ?: (len - 1)
+            // in case of unterminated quote, consume rest of string
+            val contentEnd = if (line[j] == '"') j else j + 1
+            result.add(line.substring(i + 1, contentEnd))
+            i = j + 1
+        } else {
+            val end = line.indexOf(' ', startIndex = i + 1)
+                .takeIf { it != -1 } ?: len
+            result.add(line.substring(i, end))
+            i = end + 1
+        }
+    }
+    return result
+}
