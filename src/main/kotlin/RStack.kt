@@ -1,13 +1,11 @@
 package io.github.paulikauro.redstonetools
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.ConditionFailedException
 import co.aikar.commands.InvalidCommandArgument
 import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.LocalSession
 import com.sk89q.worldedit.UnknownDirectionException
 import com.sk89q.worldedit.WorldEdit
-import com.sk89q.worldedit.WorldEditException
 import com.sk89q.worldedit.function.mask.ExistingBlockMask
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy
 import com.sk89q.worldedit.function.operation.Operations
@@ -104,25 +102,21 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         expand: Boolean,
         withAir: Boolean,
     ): Int {
-        val affected = try {
-            session.createEditSession(player).use { editSession ->
-                val copy = ForwardExtentCopy(editSession, selection, editSession, selection.minimumPoint).apply {
-                    repetitions = count
-                    transform = AffineTransform().translate(spacing)
-                    isCopyingBiomes = false
-                    isCopyingEntities = false
-                    isRemovingEntities = false
-                    if (!withAir) {
-                        sourceMask = ExistingBlockMask(editSession)
-                    }
+        val affected = session.createEditSession(player).use { editSession ->
+            val copy = ForwardExtentCopy(editSession, selection, editSession, selection.minimumPoint).apply {
+                repetitions = count
+                transform = AffineTransform().translate(spacing)
+                isCopyingBiomes = false
+                isCopyingEntities = false
+                isRemovingEntities = false
+                if (!withAir) {
+                    sourceMask = ExistingBlockMask(editSession)
                 }
-                Operations.complete(copy)
-                session.remember(editSession)
-                // TODO: flush block bag?
-                copy.affected
             }
-        } catch (e: WorldEditException) {
-            throw ConditionFailedException("Something went wrong: ${e.message}")
+            Operations.complete(copy)
+            session.remember(editSession)
+            // TODO: flush block bag?
+            copy.affected
         }
         player.info("Operation completed, $affected blocks affected")
         if (expand) {
