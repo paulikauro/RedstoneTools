@@ -29,7 +29,7 @@ private const val DEFAULT_SPACING = 2
 @CommandPermission("redstonetools.rstack")
 private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
     @Default
-    @Syntax("[-ew] [count] ([direction] [spacing] | [spacing vector])")
+    @Syntax("[-esw] [-m <mask>] [count] ([direction] [spacing] | [spacing vector])")
     fun rstack(
         player: WEPlayer,
         session: LocalSession,

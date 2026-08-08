@@ -15,22 +15,30 @@ Like WorldEdit's `//stack`, but
 - supports more directions, in particular ones used in diagonal building orientations
 - has a flag for expanding the selection to cover the whole stacked area
 
-Usage: `//rstack [-ew] [count] ([direction] [spacing] | [spacing vector])`
+Usage: `//rstack [-esw] [-m <mask>] [count] ([direction] [spacing] | [spacing vector])`
 
 - `-e`: when specified, the selection is expanded
+- `-s`: when specified, the selection is shifted to the last stacked copy
+
+`-e` and `-s` are mutually exclusive.
+
 - `-w` ("with air"): when specified, **stacked copies may not overlap** (corresponds to omitting `-a` from WorldEdit
   commands)
+- `-m <mask>`: only copy blocks matching `mask`. Defaults to `#existing`.
+
+`-w` and `-m` are mutually exclusive.
+
 - `count`: how many copies to stack. Defaults to 1.
-- `direction`: the usual WorldEdit directions. Additionally, `u` or `d` may be appended to
-  most directions to get a diagonal (in the y-axis) direction. Defaults to `me`
+- `direction`: the usual WorldEdit directions. Additionally, `u` or `d` may be appended to most directions to get a
+  diagonal (in the y-axis) direction. Defaults to `me`
   (whatever direction you're looking at)
-- `spacing`: how far apart copies should be stacked. Defaults to 2 due to that being
-  common in redstoning.
+- `spacing`: how far apart copies should be stacked. Defaults to 2 due to that being common in redstoning.
 - `spacing vector`: Instead of `direction` and `spacing`, an explicit spacing vector of the form `dx,dy,dz` may be
   provided. The coordinates are relative to the world's coordinate axes, not the player's orientation.
 
 NOTE: The order of arguments is quite free. The only constraint is that `count` should precede `spacing` whenever both
-are used.
+are used. This is subject to change, and you are recommended to specify the arguments (except flags) in the order in
+which they are listed here.
 
 ## `//that [mask] [-d|-dd|-ddd]`
 
@@ -72,8 +80,8 @@ Usage: `/container [type] [power]`
 - `//selstack push` pushes your selection points onto a stack (and clears your current selection)
 - `//selstack pop` clears your selection and restores a previous one from the stack
 - `//selstack clear` clears the stack itself
-- `//selstack show` shows you what's on the stack
-  To be clear, `//selstack` never changes any blocks, it only operates on your selection just like the selection wand or
+- `//selstack show` shows you what's on the stack To be clear, `//selstack` never changes any blocks, it only operates
+  on your selection just like the selection wand or
   `//pos1` and `//pos2` do.
 
 ## `/pin`
@@ -92,8 +100,8 @@ Gives the player an upside-down slab of specified type
 
 Usage: `/slab [type]`
 
-- `type`: a type of slab
-  If type is not specified and the player is holding a slab, the upside-down magic is applied to that instead.
+- `type`: a type of slab If type is not specified and the player is holding a slab, the upside-down magic is applied to
+  that instead.
 
 ## `/cauldron`
 
