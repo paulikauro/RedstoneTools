@@ -35,6 +35,7 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         args: Array<String>,
     ) {
         var expand = false
+        var shift = false
         var withAir = false
         var directionVec: BlockVector3? = null
         var directionStr: String? = null
@@ -59,6 +60,7 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
                     for (flag in arg.drop(1)) {
                         when (flag) {
                             'e' -> expand = true
+                            's' -> shift = true
                             'w' -> withAir = true
                             else -> throw InvalidCommandArgument("Unknown flag: -$flag")
                         }
@@ -72,6 +74,7 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
                 }
             }
         }
+        if (shift && expand) throw InvalidCommandArgument("-e and -s are mutually exclusive")
         if (directionVec == null) {
             directionVec = directionVectorFor(player, directionStr ?: "me").multiply(spacing ?: DEFAULT_SPACING)
         } else if (directionStr != null || spacing != null) {
@@ -82,7 +85,8 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
             count *= -1
             directionVec = directionVec.multiply(-1)
         }
-        doStack(player, session, selection, count, directionVec, expand, withAir)
+        val affected = doStack(player, session, selection, count, directionVec, expand, shift, withAir)
+        player.info("Operation completed, $affected blocks affected")
     }
 
     private fun parseBlockVec(arg: String): BlockVector3 {
@@ -100,6 +104,7 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         count: Int,
         spacing: BlockVector3,
         expand: Boolean,
+        shift: Boolean,
         withAir: Boolean,
     ): Int {
         val affected = session.createEditSession(player).use { editSession ->
@@ -118,19 +123,20 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
             // TODO: flush block bag?
             copy.affected
         }
-        player.info("Operation completed, $affected blocks affected")
+        val total = spacing.multiply(count)
         if (expand) {
-            expandSelection(selection, spacing.multiply(count), session, player)
+            selection.expand(total)
+        }
+        if (shift) {
+            selection.shift(total)
+        }
+        if (expand || shift) {
+            session.getRegionSelector(player.world).apply {
+                learnChanges()
+                explainRegionAdjust(player, session)
+            }
         }
         return affected
-    }
-
-    private fun expandSelection(selection: Region, amount: BlockVector3, session: LocalSession, player: WEPlayer) {
-        selection.expand(amount)
-        session.getRegionSelector(player.world).apply {
-            learnChanges()
-            explainRegionAdjust(player, session)
-        }
     }
 
     private fun directionVectorFor(player: WEPlayer, direction: String): BlockVector3 {
