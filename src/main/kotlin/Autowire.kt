@@ -2,7 +2,7 @@ package io.github.paulikauro.redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
-import net.kyori.adventure.text.Component.text
+import io.github.paulikauro.redstonetools.adventure.c
 import org.bukkit.GameMode
 import org.bukkit.Material
 import org.bukkit.block.data.type.RedstoneWire
@@ -33,14 +33,12 @@ private class Autowire(
     @Description("Toggle autowire")
     fun toggleAutowire(player: Player) {
         player.sendActionBar(
-            text(
-                if (autos.remove(player.uniqueId)) {
-                    "Auto wire Disabled"
-                } else {
-                    autos.add(player.uniqueId)
-                    "Auto wire Enabled"
-                }
-            )
+            if (autos.remove(player.uniqueId)) {
+                "Auto wire Disabled"
+            } else {
+                autos.add(player.uniqueId)
+                "Auto wire Enabled"
+            }.c()
         )
     }
 

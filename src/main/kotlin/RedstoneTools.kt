@@ -6,7 +6,7 @@ import co.aikar.commands.PaperCommandManager
 import co.aikar.commands.RegisteredCommand
 import com.sk89q.worldedit.WorldEditException
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
-import net.kyori.adventure.extra.kotlin.plus
+import io.github.paulikauro.redstonetools.adventure.c
 import net.kyori.adventure.text.format.NamedTextColor.DARK_GRAY
 import net.kyori.adventure.text.format.NamedTextColor.GRAY
 import org.bukkit.command.CommandSender
@@ -24,7 +24,7 @@ class RedstoneTools : JavaPlugin() {
         is RedstoneToolsException, is WorldEditException -> {
             val message = throwable.message ?: "Something went wrong."
             sender.getIssuer<CommandSender>()
-                .sendMessage("["[DARK_GRAY] + "RedstoneTools"[GRAY] + "] "[DARK_GRAY] + message[GRAY])
+                .sendMessage(c("[".c(DARK_GRAY), "RedstoneTools".c(GRAY), "] ".c(DARK_GRAY), message.c(GRAY)))
             true
         }
 

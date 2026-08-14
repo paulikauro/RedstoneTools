@@ -2,7 +2,7 @@ package io.github.paulikauro.redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
-import net.kyori.adventure.text.Component
+import io.github.paulikauro.redstonetools.adventure.c
 import org.bukkit.Material
 import org.bukkit.block.data.type.Slab
 import org.bukkit.entity.Player
@@ -61,8 +61,8 @@ private class Slab : BaseCommand(), Listener {
         blockData.type = Slab.Type.TOP
         itemStack.modifyMeta<BlockDataMeta> {
             setBlockData(blockData)
-            displayName(Component.text("Upside Down Slab"))
-            lore(listOf(Component.text("UpsiDownORE")))
+            displayName("Upside Down Slab".c())
+            lore(listOf("UpsiDownORE".c()))
             setEnchantmentGlintOverride(true)
         }
         return itemStack

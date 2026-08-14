@@ -4,7 +4,7 @@ import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
 import de.tr7zw.nbtapi.iface.ReadWriteNBT
 import de.tr7zw.nbtapi.iface.ReadWriteNBTCompoundList
-import net.kyori.adventure.text.Component
+import io.github.paulikauro.redstonetools.adventure.c
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
@@ -38,7 +38,7 @@ private class Container : BaseCommand() {
         val itemStack = ItemStack(material, 1)
         // ItemMeta is never null because it's only null if material is air.
         itemStack.modifyMeta<ItemMeta> {
-            val text = Component.text("Power ${power.originalName}")
+            val text = "Power ${power.originalName}".c()
             displayName(text)
             lore(listOf(text))
             setEnchantmentGlintOverride(true)

@@ -16,10 +16,9 @@ import com.sk89q.worldedit.util.formatting.text.event.HoverEvent
 import com.sk89q.worldedit.util.formatting.text.format.TextColor
 import de.tr7zw.nbtapi.NBT
 import de.tr7zw.nbtapi.iface.ReadWriteNBT
+import io.github.paulikauro.redstonetools.adventure.c
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.Component.text
-import net.kyori.adventure.text.ComponentBuilderApplicable
 import net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE
 import net.kyori.adventure.text.format.NamedTextColor.RED
 import org.bukkit.Location
@@ -30,19 +29,11 @@ import org.bukkit.plugin.Plugin
 import java.util.*
 import kotlin.math.ceil
 
-operator fun String.get(s: ComponentBuilderApplicable): Component =
-    text().content(this).applicableApply(s).build()
-
-operator fun ComponentBuilderApplicable.times(other: ComponentBuilderApplicable) = ComponentBuilderApplicable {
-    it.applicableApply(this)
-    it.applicableApply(other)
-}
-
 // overloads for WEPlayer until WE migrates to Adventure
-fun Audience.info(msg: String): Unit = sendMessage(msg[LIGHT_PURPLE])
-fun WEPlayer.info(msg: String): Unit = sendMessage(msg[LIGHT_PURPLE])
-fun Audience.err(msg: String): Unit = sendMessage(msg[RED])
-fun WEPlayer.err(msg: String): Unit = sendMessage(msg[RED])
+fun Audience.info(msg: String): Unit = sendMessage(msg.c(LIGHT_PURPLE))
+fun WEPlayer.info(msg: String): Unit = sendMessage(msg.c(LIGHT_PURPLE))
+fun Audience.err(msg: String): Unit = sendMessage(msg.c(RED))
+fun WEPlayer.err(msg: String): Unit = sendMessage(msg.c(RED))
 
 typealias WEPlayer = com.sk89q.worldedit.entity.Player
 

@@ -23,7 +23,6 @@ repositories {
 dependencies {
     implementation("co.aikar:acf-paper:0.5.1-SNAPSHOT")
     implementation("com.google.re2j:re2j:1.8")
-    implementation("net.kyori:adventure-extra-kotlin:4.16.0")
 
     compileOnly("de.tr7zw:item-nbt-api-plugin:2.15.0")
     compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.11-SNAPSHOT")
