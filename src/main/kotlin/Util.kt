@@ -9,6 +9,7 @@ import com.sk89q.worldedit.extension.input.ParserContext
 import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.Region
+import com.sk89q.worldedit.regions.RegionSelector
 import com.sk89q.worldedit.util.formatting.component.PaginationBox
 import com.sk89q.worldedit.util.formatting.text.TextComponent
 import com.sk89q.worldedit.util.formatting.text.event.ClickEvent
@@ -19,8 +20,7 @@ import de.tr7zw.nbtapi.iface.ReadWriteNBT
 import io.github.paulikauro.redstonetools.adventure.c
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE
-import net.kyori.adventure.text.format.NamedTextColor.RED
+import net.kyori.adventure.text.format.NamedTextColor.*
 import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
@@ -32,6 +32,8 @@ import kotlin.math.ceil
 // overloads for WEPlayer until WE migrates to Adventure
 fun Audience.info(msg: String): Unit = sendMessage(msg.c(LIGHT_PURPLE))
 fun WEPlayer.info(msg: String): Unit = sendMessage(msg.c(LIGHT_PURPLE))
+fun WEPlayer.info(msg: Component): Unit = sendMessage(msg.c(LIGHT_PURPLE))
+fun WEPlayer.warn(msg: String): Unit = sendMessage(msg.c(GRAY))
 fun Audience.err(msg: String): Unit = sendMessage(msg.c(RED))
 fun WEPlayer.err(msg: String): Unit = sendMessage(msg.c(RED))
 
@@ -73,6 +75,16 @@ const val MAKE_SELECTION_FIRST = "Make a region selection first."
 
 fun LocalSession.requireSelection(): Region =
     getSelectionOrNull() ?: throw RedstoneToolsException(MAKE_SELECTION_FIRST)
+
+fun LocalSession.setSelectorAndUpdateCUI(player: WEPlayer, selector: RegionSelector) {
+    setRegionSelector(player.world, selector)
+    dispatchCUISelection(player)
+}
+
+// WorldEdit's region selectors all have a constructor that takes another RegionSelector as an argument,
+// and they produce accurate copies when the types match
+fun RegionSelector.clone(): RegionSelector =
+    this::class.java.getDeclaredConstructor(RegionSelector::class.java).newInstance(this)
 
 const val COMPLETION_MASK = "we_mask"
 
