@@ -16,17 +16,20 @@ import com.sk89q.worldedit.util.formatting.component.InvalidComponentException
 import com.sk89q.worldedit.util.formatting.text.TextComponent
 import com.sk89q.worldedit.util.formatting.text.format.TextColor
 import com.sk89q.worldedit.world.block.BlockCategories
+import java.util.*
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.block.BlockState
 import org.bukkit.block.Sign
 import org.bukkit.block.sign.Side
 import org.bukkit.entity.Player
-import java.util.*
 
 fun PluginScope.createSignSearch() {
     val searchResults = HashMap<UUID, List<LocationContainer>>()
     commandManager.apply {
-        commandCompletions.registerCompletion(COMPLETION_SEARCH_PAGE, PageCompletionHandler(searchResults))
+        commandCompletions.registerCompletion(
+                COMPLETION_SEARCH_PAGE,
+                PageCompletionHandler(searchResults)
+        )
         registerCommand(SignSearch(searchResults))
     }
 }
@@ -36,28 +39,32 @@ private const val COMPLETION_SEARCH_PAGE = "search_page"
 @CommandAlias("/signsearch|/ss")
 @Description("Search for text of signs within a selection using a regular expression")
 @CommandPermission("redstonetools.signsearch")
-private class SignSearch(private val searchResults: MutableMap<UUID, List<LocationContainer>>) : BaseCommand() {
+private class SignSearch(private val searchResults: MutableMap<UUID, List<LocationContainer>>) :
+        BaseCommand() {
     @Default
     @Syntax("[regex]")
     fun search(
-        player: WEPlayer,
-        selection: Region,
-        arg: String,
+            player: WEPlayer,
+            selection: Region,
+            arg: String,
     ) {
         // TODO:
         //  - //ss without selection gives you "plz select first"
         //  - //ss with selection gives you usage
-        val pattern = try {
-            Pattern.compile(arg)
-        } catch (e: PatternSyntaxException) {
-            throw RedstoneToolsException("Illegal pattern: " + e.message)
-        }
+        val pattern =
+                try {
+                    Pattern.compile(arg)
+                } catch (e: PatternSyntaxException) {
+                    throw RedstoneToolsException("Illegal pattern: " + e.message)
+                }
         val matches = mutableListOf<LocationContainer>()
         // selection's world is never null when given from the command context
         val world = selection.world!!
         val blockMask = BlockCategoryMask(world, BlockCategories.ALL_SIGNS)
         val regionFunction = RegionFunction { position ->
-            val state = BukkitAdapter.adapt(world).getBlockState(position.x(), position.y(), position.z())
+            val state =
+                    BukkitAdapter.adapt(world)
+                            .getBlockState(position.x(), position.y(), position.z())
             val match = parseMatch(state, pattern)
             if (match != null) {
                 matches.add(LocationContainer(position, match))
@@ -80,53 +87,62 @@ private class SignSearch(private val searchResults: MutableMap<UUID, List<Locati
     @CommandCompletion("@$COMPLETION_SEARCH_PAGE")
     @Syntax("[number]")
     fun page(
-        player: Player,
-        page: Int,
+            player: Player,
+            page: Int,
     ) {
-        val results = searchResults[player.uniqueId] ?: throw RedstoneToolsException("Use //signsearch to get results")
-        val paginationBox = LocationsPaginationBox(results, "Search Results", "//signsearch -p %page%")
-        val component = try {
-            paginationBox.create(page)
-        } catch (_: InvalidComponentException) {
-            throw RedstoneToolsException("Invalid page number.")
-        }
+        val results =
+                searchResults[player.uniqueId]
+                        ?: throw RedstoneToolsException("Use //signsearch to get results")
+        val paginationBox =
+                LocationsPaginationBox(results, "Search Results", "//signsearch -p %page%")
+        val component =
+                try {
+                    paginationBox.create(page)
+                } catch (_: InvalidComponentException) {
+                    throw RedstoneToolsException("Invalid page number.")
+                }
         player.we().print(component)
     }
 
     private fun parseMatch(state: BlockState, pattern: Pattern): TextComponent? {
         val sign = state as? Sign ?: return null
-        fun messages(side: Side) = sign
-            .getSide(side).lines()
-            .map(PlainTextComponentSerializer.plainText()::serialize)
+        fun messages(side: Side) =
+                sign.getSide(side).lines().map(PlainTextComponentSerializer.plainText()::serialize)
         // TODO: front/back in results?
         return (messages(Side.FRONT) + messages(Side.BACK))
-            .mapIndexedNotNull { index, line ->
-                val (didMatch, parts) = line.splitMap(pattern, noMatch = TextComponent::of) { matcher ->
-                    val m = matcher.group()
-                    if (m.isEmpty()) {
-                        TextComponent.of("|").color(TextColor.RED)
+                .mapIndexedNotNull { index, line ->
+                    val (didMatch, parts) =
+                            line.splitMap(pattern, noMatch = TextComponent::of) { matcher ->
+                                val m = matcher.group()
+                                if (m.isEmpty()) {
+                                    TextComponent.of("|").color(TextColor.RED)
+                                } else {
+                                    TextComponent.of(matcher.group()).color(TextColor.YELLOW)
+                                }
+                            }
+                    if (didMatch) {
+                        TextComponent.of("Line ${index + 1}: ")
+                                .color(TextColor.GRAY)
+                                .append(
+                                        TextComponent.join(TextComponent.empty(), parts)
+                                                .colorIfAbsent(TextColor.WHITE)
+                                )
                     } else {
-                        TextComponent.of(matcher.group()).color(TextColor.YELLOW)
+                        null
                     }
                 }
-                if (didMatch) {
-                    TextComponent.of("Line ${index + 1}: ")
-                        .color(TextColor.GRAY)
-                        .append(TextComponent.join(TextComponent.empty(), parts).colorIfAbsent(TextColor.WHITE))
-                } else {
-                    null
+                .ifEmpty { null }
+                ?.let { matchComponents ->
+                    TextComponent.join(TextComponent.newline(), matchComponents)
                 }
-            }
-            .ifEmpty { null }
-            ?.let { matchComponents -> TextComponent.join(TextComponent.newline(), matchComponents) }
     }
 }
 
 // TODO: maybe pull this into a library, it's in ChattORE too (except not RE2J)
 private fun <T> String.splitMap(
-    pattern: Pattern,
-    noMatch: (String) -> T,
-    onMatch: (Matcher) -> T,
+        pattern: Pattern,
+        noMatch: (String) -> T,
+        onMatch: (Matcher) -> T,
 ): Pair<Boolean, MutableList<T>> {
     val m = pattern.matcher(this)
     val result = mutableListOf<T>()

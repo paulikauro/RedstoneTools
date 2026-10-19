@@ -28,10 +28,10 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
     @Default
     @Syntax("[-e] [direction] [count] [spacing]")
     fun rstack(
-        player: WEPlayer,
-        session: LocalSession,
-        selection: Region,
-        args: Array<String>,
+            player: WEPlayer,
+            session: LocalSession,
+            selection: Region,
+            args: Array<String>,
     ) {
         var expand = false
         var withAir = false
@@ -70,36 +70,44 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
 
     // throws UnknownDirectionException
     private fun doStack(
-        player: WEPlayer,
-        session: LocalSession,
-        selection: Region,
-        count: Int,
-        spacing: Int,
-        expand: Boolean,
-        withAir: Boolean,
-        direction: String,
+            player: WEPlayer,
+            session: LocalSession,
+            selection: Region,
+            count: Int,
+            spacing: Int,
+            expand: Boolean,
+            withAir: Boolean,
+            direction: String,
     ): Int {
         val spacingVec = directionVectorFor(player, direction).multiply(spacing)
-        val affected = try {
-            session.createEditSession(player).use { editSession ->
-                val copy = ForwardExtentCopy(editSession, selection, editSession, selection.minimumPoint).apply {
-                    repetitions = count
-                    transform = AffineTransform().translate(spacingVec)
-                    isCopyingBiomes = false
-                    isCopyingEntities = false
-                    isRemovingEntities = false
-                    if (!withAir) {
-                        sourceMask = ExistingBlockMask(editSession)
+        val affected =
+                try {
+                    session.createEditSession(player).use { editSession ->
+                        val copy =
+                                ForwardExtentCopy(
+                                                editSession,
+                                                selection,
+                                                editSession,
+                                                selection.minimumPoint
+                                        )
+                                        .apply {
+                                            repetitions = count
+                                            transform = AffineTransform().translate(spacingVec)
+                                            isCopyingBiomes = false
+                                            isCopyingEntities = false
+                                            isRemovingEntities = false
+                                            if (!withAir) {
+                                                sourceMask = ExistingBlockMask(editSession)
+                                            }
+                                        }
+                        Operations.complete(copy)
+                        session.remember(editSession)
+                        // TODO: flush block bag?
+                        copy.affected
                     }
+                } catch (e: WorldEditException) {
+                    throw ConditionFailedException("Something went wrong: ${e.message}")
                 }
-                Operations.complete(copy)
-                session.remember(editSession)
-                // TODO: flush block bag?
-                copy.affected
-            }
-        } catch (e: WorldEditException) {
-            throw ConditionFailedException("Something went wrong: ${e.message}")
-        }
         player.info("Operation completed, $affected blocks affected")
         if (expand) {
             expandSelection(selection, spacingVec.multiply(count), session, player)
@@ -107,7 +115,12 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         return affected
     }
 
-    private fun expandSelection(selection: Region, amount: BlockVector3, session: LocalSession, player: WEPlayer) {
+    private fun expandSelection(
+            selection: Region,
+            amount: BlockVector3,
+            session: LocalSession,
+            player: WEPlayer
+    ) {
         selection.expand(amount)
         session.getRegionSelector(player.world).apply {
             learnChanges()
@@ -118,13 +131,14 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
     // throws UnknownDirectionException
     private fun directionVectorFor(player: WEPlayer, direction: String): BlockVector3 {
         // TODO: clean this up
-        val pitch = when {
-            direction == "me" -> player.location.pitch
-            // diagonal direction strings, eg. nd (north down) or fu (forward up)
-            isDiagDirStr(direction, 'u') -> -25.0f
-            isDiagDirStr(direction, 'd') -> 25.0f
-            else -> 0.0f
-        }
+        val pitch =
+                when {
+                    direction == "me" -> player.location.pitch
+                    // diagonal direction strings, eg. nd (north down) or fu (forward up)
+                    isDiagDirStr(direction, 'u') -> -25.0f
+                    isDiagDirStr(direction, 'd') -> 25.0f
+                    else -> 0.0f
+                }
         val vec = worldEdit.getDiagonalDirection(player, direction)
         if (vec.isUpright || abs(pitch) <= 22.5) {
             // horizontal or vertical direction
@@ -133,17 +147,19 @@ private class RStack(private val worldEdit: WorldEdit) : BaseCommand() {
         // diagonal direction, need to add the y-component
         // negative pitch is upwards
         return vec.add(
-            if (pitch < 0) {
-                Direction.UP
-            } else {
-                Direction.DOWN
-            }.toBlockVector()
+                if (pitch < 0) {
+                            Direction.UP
+                        } else {
+                            Direction.DOWN
+                        }
+                        .toBlockVector()
         )
     }
 
     private fun isDiagDirStr(direction: String, upOrDown: Char) =
-        // check length, because 'd' and 'u' alone are not diagonal directions (they're just up or down)
-        direction.length > 1 && direction.last().lowercaseChar() == upOrDown
+            // check length, because 'd' and 'u' alone are not diagonal directions (they're just up
+            // or down)
+            direction.length > 1 && direction.last().lowercaseChar() == upOrDown
 }
 
 private val BlockVector3.isUpright: Boolean

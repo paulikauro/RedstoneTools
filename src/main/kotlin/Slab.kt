@@ -14,9 +14,10 @@ import org.bukkit.inventory.meta.BlockDataMeta
 
 fun PluginScope.createSlab() {
     // TODO: consider using BlockCategories.SLABS
-    val slabCompletions = Material.entries
-        .filter { it.isBlock && it.createBlockData() is Slab }
-        .map { it.toString().lowercase() }
+    val slabCompletions =
+            Material.entries.filter { it.isBlock && it.createBlockData() is Slab }.map {
+                it.toString().lowercase()
+            }
     val slab = Slab()
     commandManager.apply {
         commandCompletions.registerStaticCompletion(COMPLETION_SLABS, slabCompletions)
@@ -34,9 +35,8 @@ private class Slab : BaseCommand(), Listener {
     @Default
     @CommandCompletion("@$COMPLETION_SLABS")
     fun slab(
-        player: Player,
-        @Optional
-        type: String?,
+            player: Player,
+            @Optional type: String?,
     ) {
         val slab: ItemStack?
         if (type != null) {
@@ -62,7 +62,6 @@ private class Slab : BaseCommand(), Listener {
         itemStack.modifyMeta<BlockDataMeta> {
             setBlockData(blockData)
             displayName(Component.text("Upside Down Slab"))
-            lore(listOf(Component.text("UpsiDownORE")))
             setEnchantmentGlintOverride(true)
         }
         return itemStack

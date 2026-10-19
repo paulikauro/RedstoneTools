@@ -4,6 +4,7 @@ import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.event.platform.PlayerInputEvent
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.util.eventbus.Subscribe
+import kotlin.random.Random
 import net.kyori.adventure.extra.kotlin.join
 import net.kyori.adventure.extra.kotlin.plus
 import net.kyori.adventure.text.Component
@@ -17,7 +18,6 @@ import org.bukkit.plugin.Plugin
 import org.bukkit.scoreboard.Criteria
 import org.bukkit.scoreboard.DisplaySlot
 import org.bukkit.scoreboard.Objective
-import kotlin.random.Random
 
 fun PluginScope.createWEHelper(worldEdit: WorldEdit) {
     pluginManager.registerEvents(WorldEditHelper(plugin, worldEdit), plugin)
@@ -42,14 +42,16 @@ private class WorldEditHelper(plugin: Plugin, private val worldEdit: WorldEdit) 
     }
 
     private fun setPlayerSelection(player: Player, wePlayer: WEPlayer) {
-        val selection = worldEdit.sessionManager.get(wePlayer).getSelectionOrNull() ?: run {
-            player.hideHelper()
-            return
-        }
+        val selection =
+                worldEdit.sessionManager.get(wePlayer).getSelectionOrNull()
+                        ?: run {
+                            player.hideHelper()
+                            return
+                        }
         val pos1 = selection.boundingBox.pos1
         val pos2 = selection.boundingBox.pos2
-        fun BlockVector3.format() = arrayOf(x(), y(), z()).map { "$it"[GRAY] }
-            .join(separator(","[GRAY]))
+        fun BlockVector3.format() =
+                arrayOf(x(), y(), z()).map { "$it"[GRAY] }.join(separator(","[GRAY]))
 
         val lines = buildList {
             add("Position 1:"[DARK_GREEN])
@@ -60,36 +62,41 @@ private class WorldEditHelper(plugin: Plugin, private val worldEdit: WorldEdit) 
                 add(text("   ") + pos2.format())
             }
             add("Volume:"[DARK_GREEN])
-            val volColor = when {
-                volume < 100000 -> GREEN
-                volume < 1000000 -> YELLOW
-                volume < 2000000 -> RED
-                else -> DARK_RED
-            }
+            val volColor =
+                    when {
+                        volume < 100000 -> GREEN
+                        volume < 1000000 -> YELLOW
+                        volume < 2000000 -> RED
+                        else -> DARK_RED
+                    }
             add("   $volume"[volColor])
             add("Dimensions:"[DARK_GREEN])
-            fun dimColor(x: Int) = when {
-                x < 50 -> GREEN
-                x < 75 -> YELLOW
-                x < 100 -> RED
-                else -> DARK_RED
-            }
+            fun dimColor(x: Int) =
+                    when {
+                        x < 50 -> GREEN
+                        x < 75 -> YELLOW
+                        x < 100 -> RED
+                        else -> DARK_RED
+                    }
 
-            val line = with(selection) { arrayOf(width, height, length) }
-                .map { "$it"[dimColor(it)] }
-                .join(separator("x"[GRAY]))
+            val line =
+                    with(selection) { arrayOf(width, height, length) }
+                            .map { "$it"[dimColor(it)] }
+                            .join(separator("x"[GRAY]))
             add(text("   ") + line)
         }
-        player.scoreboard = Bukkit.getScoreboardManager().newScoreboard.apply {
-            registerNewObjective(
-                Random.nextInt(1234567890).toString(),
-                Criteria.DUMMY,
-                "Current selection"[RED],
-            ).apply {
-                displaySlot = DisplaySlot.SIDEBAR
-                addLinesToScoreboard(lines)
-            }
-        }
+        player.scoreboard =
+                Bukkit.getScoreboardManager().newScoreboard.apply {
+                    registerNewObjective(
+                                    Random.nextInt(1234567890).toString(),
+                                    Criteria.DUMMY,
+                                    "Current selection"[RED],
+                            )
+                            .apply {
+                                displaySlot = DisplaySlot.SIDEBAR
+                                addLinesToScoreboard(lines)
+                            }
+                }
     }
 
     private fun Player.hideHelper() {

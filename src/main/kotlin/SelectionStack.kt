@@ -21,7 +21,8 @@ private typealias Stack = MutableList<Pair<BlockVector3, BlockVector3>>
 private class SelectionStack : BaseCommand() {
     private val stacks = mutableMapOf<UUID, Stack>()
 
-    private fun stackOf(player: WEPlayer): Stack = stacks.computeIfAbsent(player.uniqueId) { mutableListOf() }
+    private fun stackOf(player: WEPlayer): Stack =
+            stacks.computeIfAbsent(player.uniqueId) { mutableListOf() }
 
     @HelpCommand
     fun help(help: CommandHelp) {
@@ -42,10 +43,12 @@ private class SelectionStack : BaseCommand() {
     @Subcommand("pop")
     @Description("Pop selection")
     fun pop(player: WEPlayer, session: LocalSession) {
-        val (pos1, pos2) = stackOf(player).removeLastOrNull() ?: run {
-            player.info("Your selection stack is empty")
-            return
-        }
+        val (pos1, pos2) =
+                stackOf(player).removeLastOrNull()
+                        ?: run {
+                            player.info("Your selection stack is empty")
+                            return
+                        }
         session.getRegionSelector(player.world).apply {
             clear()
             selectPrimary(pos1, PermissiveSelectorLimits.getInstance())
@@ -67,9 +70,7 @@ private class SelectionStack : BaseCommand() {
         // TODO: click to select?
         player.info("Least recent")
         player.info("pos1 / pos2")
-        stackOf(player).forEach { (pos1, pos2) ->
-            player.info("$pos1 / $pos2")
-        }
+        stackOf(player).forEach { (pos1, pos2) -> player.info("$pos1 / $pos2") }
         player.info("Most recent (top of stack)")
     }
 }

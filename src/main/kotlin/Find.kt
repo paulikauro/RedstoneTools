@@ -15,7 +15,10 @@ import java.util.*
 fun PluginScope.createFind() {
     val findResults = HashMap<UUID, List<LocationContainer>>()
     commandManager.apply {
-        commandCompletions.registerCompletion(COMPLETION_FIND_PAGE, PageCompletionHandler(findResults))
+        commandCompletions.registerCompletion(
+                COMPLETION_FIND_PAGE,
+                PageCompletionHandler(findResults)
+        )
         registerCommand(Find(findResults))
     }
 }
@@ -25,13 +28,14 @@ private const val COMPLETION_FIND_PAGE = "find_page"
 @CommandAlias("/find")
 @Description("Find blocks matching a mask in your selection")
 @CommandPermission("redstonetools.find")
-private class Find(private val findResults: MutableMap<UUID, List<LocationContainer>>) : BaseCommand() {
+private class Find(private val findResults: MutableMap<UUID, List<LocationContainer>>) :
+        BaseCommand() {
     @Default
     @Syntax("[mask]")
     fun find(
-        player: WEPlayer,
-        mask: Mask,
-        selection: Region,
+            player: WEPlayer,
+            mask: Mask,
+            selection: Region,
     ) {
         // TODO: this gives you "no match for asdf" error if you give it an invalid mask
         //  it should be something nicer
@@ -56,16 +60,19 @@ private class Find(private val findResults: MutableMap<UUID, List<LocationContai
     @CommandCompletion("@$COMPLETION_FIND_PAGE")
     @Syntax("[number]")
     fun page(
-        player: WEPlayer,
-        page: Int,
+            player: WEPlayer,
+            page: Int,
     ) {
-        val locations = findResults[player.uniqueId] ?: throw RedstoneToolsException("Use //find to get results")
+        val locations =
+                findResults[player.uniqueId]
+                        ?: throw RedstoneToolsException("Use //find to get results")
         val paginationBox = LocationsPaginationBox(locations, "Find Results", "//find -p %page%")
-        val component = try {
-            paginationBox.create(page)
-        } catch (_: InvalidComponentException) {
-            throw RedstoneToolsException("Invalid page number.")
-        }
+        val component =
+                try {
+                    paginationBox.create(page)
+                } catch (_: InvalidComponentException) {
+                    throw RedstoneToolsException("Invalid page number.")
+                }
         player.print(component)
     }
 }

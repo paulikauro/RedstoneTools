@@ -2,6 +2,7 @@ package io.github.paulikauro.redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
+import java.util.*
 import net.kyori.adventure.text.Component.text
 import org.bukkit.Material
 import org.bukkit.Sound
@@ -15,7 +16,6 @@ import org.bukkit.event.block.Action
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.EquipmentSlot
-import java.util.*
 
 fun PluginScope.createCauldron() {
     val cauldron = Cauldron()
@@ -32,14 +32,14 @@ private class Cauldron : BaseCommand(), Listener {
     @Default
     fun toggleCauldronMode(player: Player) {
         player.sendActionBar(
-            text(
-                if (enabledPlayers.remove(player.uniqueId)) {
-                    "Cauldron Mode Disabled"
-                } else {
-                    enabledPlayers.add(player.uniqueId)
-                    "Cauldron Mode Enabled"
-                }
-            )
+                text(
+                        if (enabledPlayers.remove(player.uniqueId)) {
+                            "Cauldron Mode Disabled"
+                        } else {
+                            enabledPlayers.add(player.uniqueId)
+                            "Cauldron Mode Enabled"
+                        }
+                )
         )
     }
 

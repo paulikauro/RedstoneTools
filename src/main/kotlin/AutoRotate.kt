@@ -2,6 +2,7 @@ package io.github.paulikauro.redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
+import java.util.*
 import net.kyori.adventure.text.Component.text
 import org.bukkit.Material
 import org.bukkit.block.data.Directional
@@ -10,7 +11,6 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.player.PlayerQuitEvent
-import java.util.*
 
 fun PluginScope.createAutoRotate() {
     val autorotate = AutoRotate()
@@ -23,22 +23,27 @@ fun PluginScope.createAutoRotate() {
 @CommandPermission("redstonetools.autorotate")
 private class AutoRotate : BaseCommand(), Listener {
     private val enabledPlayers = mutableSetOf<UUID>()
-    private val rotatable = setOf(
-        Material.REPEATER, Material.COMPARATOR, Material.OBSERVER, Material.PISTON, Material.STICKY_PISTON,
-    )
+    private val rotatable =
+            setOf(
+                    Material.REPEATER,
+                    Material.COMPARATOR,
+                    Material.OBSERVER,
+                    Material.PISTON,
+                    Material.STICKY_PISTON,
+            )
 
     @Default
     @Description("Toggle autorotate")
     fun toggleAutoRotate(player: Player) {
         player.sendActionBar(
-            text(
-                if (enabledPlayers.remove(player.uniqueId)) {
-                    "Auto Rotate Disabled"
-                } else {
-                    enabledPlayers.add(player.uniqueId)
-                    "Auto Rotate Enabled"
-                }
-            )
+                text(
+                        if (enabledPlayers.remove(player.uniqueId)) {
+                            "Auto Rotate Disabled"
+                        } else {
+                            enabledPlayers.add(player.uniqueId)
+                            "Auto Rotate Enabled"
+                        }
+                )
         )
     }
 
