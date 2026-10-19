@@ -2,6 +2,7 @@ package io.github.paulikauro.redstonetools
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
+import java.util.*
 import net.kyori.adventure.text.Component.text
 import org.bukkit.GameMode
 import org.bukkit.Material
@@ -13,7 +14,6 @@ import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.plugin.PluginManager
-import java.util.*
 
 fun PluginScope.createAutowire() {
     val autowire = Autowire(pluginManager)
@@ -25,7 +25,7 @@ fun PluginScope.createAutowire() {
 @Description("Get that there redstone automagically!")
 @CommandPermission("redstonetools.autowire")
 private class Autowire(
-    private val pluginManager: PluginManager,
+        private val pluginManager: PluginManager,
 ) : BaseCommand(), Listener {
     private val autos = mutableSetOf<UUID>()
 
@@ -33,14 +33,14 @@ private class Autowire(
     @Description("Toggle autowire")
     fun toggleAutowire(player: Player) {
         player.sendActionBar(
-            text(
-                if (autos.remove(player.uniqueId)) {
-                    "Auto wire Disabled"
-                } else {
-                    autos.add(player.uniqueId)
-                    "Auto wire Enabled"
-                }
-            )
+                text(
+                        if (autos.remove(player.uniqueId)) {
+                            "Auto wire Disabled"
+                        } else {
+                            autos.add(player.uniqueId)
+                            "Auto wire Enabled"
+                        }
+                )
         )
     }
 
@@ -56,24 +56,26 @@ private class Autowire(
 
     @EventHandler(ignoreCancelled = true)
     fun onAutoWireEvent(event: BlockPlaceEvent) {
-        if (event.player.uniqueId !in autos
-            || event.player.gameMode != GameMode.CREATIVE
-            || !event.block.blockData.material.isSolid
-            || event.blockPlaced.type.hasGravity()
-        ) return
+        if (event.player.uniqueId !in autos ||
+                        event.player.gameMode != GameMode.CREATIVE ||
+                        !event.block.blockData.material.isSolid ||
+                        event.blockPlaced.type.hasGravity()
+        )
+                return
         val wirePosition = event.blockPlaced.location.add(0.0, 1.0, 0.0)
         if (wirePosition.block.type != Material.AIR) return
         val airState = wirePosition.block.state
         wirePosition.block.type = Material.REDSTONE_WIRE
-        val blockPlaceEvent = BlockPlaceEvent(
-            wirePosition.block,
-            airState,
-            event.blockPlaced,
-            ItemStack(Material.REDSTONE),
-            event.player,
-            true,
-            event.hand
-        )
+        val blockPlaceEvent =
+                BlockPlaceEvent(
+                        wirePosition.block,
+                        airState,
+                        event.blockPlaced,
+                        ItemStack(Material.REDSTONE),
+                        event.player,
+                        true,
+                        event.hand
+                )
         pluginManager.callEvent(blockPlaceEvent)
         if (blockPlaceEvent.isCancelled) {
             wirePosition.block.type = Material.AIR
@@ -81,9 +83,7 @@ private class Autowire(
         }
         wirePosition.block.type = Material.REDSTONE_WIRE
         val wireData = Material.REDSTONE_WIRE.createBlockData() as RedstoneWire
-        wireData.allowedFaces.forEach {
-            wireData.setFace(it, RedstoneWire.Connection.SIDE)
-        }
+        wireData.allowedFaces.forEach { wireData.setFace(it, RedstoneWire.Connection.SIDE) }
         wirePosition.block.blockData = wireData
     }
 }

@@ -8,17 +8,17 @@ import com.sk89q.worldedit.function.mask.Mask
 import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.regions.CuboidRegion
 import com.sk89q.worldedit.regions.selector.CuboidRegionSelector
-import org.bukkit.Bukkit
-import org.bukkit.plugin.Plugin
 import java.lang.System.nanoTime
 import java.util.BitSet
 import java.util.concurrent.CompletableFuture
 import kotlin.collections.ArrayDeque
+import org.bukkit.Bukkit
+import org.bukkit.plugin.Plugin
 
 data class ThatConfig(
-    val sizeLimit: Int = 200,
-    val maxTimePerTickMs: Int = 30,
-    val maxTicks: Int = 5,
+        val sizeLimit: Int = 200,
+        val maxTimePerTickMs: Int = 30,
+        val maxTicks: Int = 5,
 )
 
 fun PluginScope.createThat(config: ThatConfig, worldEdit: WorldEdit) {
@@ -31,17 +31,20 @@ private const val ITERATIONS_PER_BURST = 2000
 @CommandAlias("/that|/hsel")
 @Description("Select the build you're looking at")
 @CommandPermission("redstonetools.that")
-private class That(private val config: ThatConfig, private val worldEdit: WorldEdit, private val plugin: Plugin) :
-    BaseCommand() {
+private class That(
+        private val config: ThatConfig,
+        private val worldEdit: WorldEdit,
+        private val plugin: Plugin
+) : BaseCommand() {
     private val sizeLimit = config.sizeLimit
     private val maxNsPerTick = config.maxTimePerTickMs * 1_000_000
 
     @Default
     @CommandCompletion("@$COMPLETION_MASK")
     fun that(
-        player: WEPlayer,
-        localSession: LocalSession,
-        args: Array<String>,
+            player: WEPlayer,
+            localSession: LocalSession,
+            args: Array<String>,
     ) {
         // very crappy argument parsing
         // the plan is to replace ACF at some point so not going to waste a lot of effort on this
@@ -68,10 +71,12 @@ private class That(private val config: ThatConfig, private val worldEdit: WorldE
         }
         if (inQuotes) throw RedstoneToolsException("Unterminated quote")
         val mask = parseMaskOrThrow(maskStr, worldEdit, localSession, player)
-        val target = player.getBlockTrace(config.sizeLimit, false, mask)?.toVector()?.toBlockPoint() ?: run {
-            player.err("No build in sight!")
-            return
-        }
+        val target =
+                player.getBlockTrace(config.sizeLimit, false, mask)?.toVector()?.toBlockPoint()
+                        ?: run {
+                            player.err("No build in sight!")
+                            return
+                        }
 
         expandRegion(target, mask, offsets).thenAccept { (region, result) ->
             when (result) {
@@ -82,9 +87,8 @@ private class That(private val config: ThatConfig, private val worldEdit: WorldE
                     sel.explainRegionAdjust(player, session)
                     player.info("Build selected.")
                 }
-
                 is ExpandResult.LimitExceeded ->
-                    player.err("${result.kind} limit exceeded. Your selection was not changed.")
+                        player.err("${result.kind} limit exceeded. Your selection was not changed.")
             }
         }
     }
@@ -95,9 +99,9 @@ private class That(private val config: ThatConfig, private val worldEdit: WorldE
     }
 
     private fun expandRegion(
-        target: BlockVector3,
-        mask: Mask,
-        offsets: List<BlockVector3>,
+            target: BlockVector3,
+            mask: Mask,
+            offsets: List<BlockVector3>,
     ): CompletableFuture<Pair<CuboidRegion, ExpandResult>> {
         var min = target
         var max = target
@@ -129,19 +133,25 @@ private class That(private val config: ThatConfig, private val worldEdit: WorldE
             ticks++
             val startNs = nanoTime()
             var sizeLimitReached = false
-            while (nanoTime() - startNs <= maxNsPerTick && !sizeLimitReached && queue.isNotEmpty()) {
+            while (nanoTime() - startNs <= maxNsPerTick &&
+                    !sizeLimitReached &&
+                    queue.isNotEmpty()) {
                 doWork(ITERATIONS_PER_BURST)
-                sizeLimitReached = max.subtract(min).run { x() > sizeLimit || y() > sizeLimit || z() > sizeLimit }
+                sizeLimitReached =
+                        max.subtract(min).run {
+                            x() > sizeLimit || y() > sizeLimit || z() > sizeLimit
+                        }
             }
-            val res = when {
-                queue.isEmpty() -> ExpandResult.Done
-                sizeLimitReached -> ExpandResult.LimitExceeded("Size")
-                ticks > config.maxTicks -> ExpandResult.LimitExceeded("Time")
-                else -> {
-                    Bukkit.getScheduler().runTaskLater(plugin, ::next, 1)
-                    return
-                }
-            }
+            val res =
+                    when {
+                        queue.isEmpty() -> ExpandResult.Done
+                        sizeLimitReached -> ExpandResult.LimitExceeded("Size")
+                        ticks > config.maxTicks -> ExpandResult.LimitExceeded("Time")
+                        else -> {
+                            Bukkit.getScheduler().runTaskLater(plugin, ::next, 1)
+                            return
+                        }
+                    }
             future.complete(CuboidRegion(min, max) to res)
         }
         next()
@@ -182,44 +192,51 @@ private class BlockSet {
 private object Offsets {
     private fun v(x: Int, y: Int, z: Int) = BlockVector3.at(x, y, z)
 
-    val DEFAULT = listOf(
-        v(1, 0, 0),
-        v(-1, 0, 0),
-        v(0, 1, 0),
-        v(0, -1, 0),
-        v(0, 0, 1),
-        v(0, 0, -1),
-    )
-    val DIAG = DEFAULT + listOf(
-        // top layer
-        v(1, 1, 0),
-        v(-1, 1, 0),
-        v(0, 1, 1),
-        v(0, 1, -1),
+    val DEFAULT =
+            listOf(
+                    v(1, 0, 0),
+                    v(-1, 0, 0),
+                    v(0, 1, 0),
+                    v(0, -1, 0),
+                    v(0, 0, 1),
+                    v(0, 0, -1),
+            )
+    val DIAG =
+            DEFAULT +
+                    listOf(
+                            // top layer
+                            v(1, 1, 0),
+                            v(-1, 1, 0),
+                            v(0, 1, 1),
+                            v(0, 1, -1),
 
-        // bottom layer
-        v(1, -1, 0),
-        v(-1, -1, 0),
-        v(0, -1, 1),
-        v(0, -1, -1),
-    )
-    val VERY_DIAG = DIAG + listOf(
-        // mid layer
-        v(1, 0, 1),
-        v(-1, 0, 1),
-        v(1, 0, -1),
-        v(-1, 0, -1),
-    )
-    val VERY_VERY_DIAG = VERY_DIAG + listOf(
-        // top corners
-        v(1, 1, 1),
-        v(-1, 1, 1),
-        v(1, 1, -1),
-        v(-1, 1, -1),
-        // bottom corners
-        v(1, -1, 1),
-        v(-1, -1, 1),
-        v(1, -1, -1),
-        v(-1, -1, -1),
-    )
+                            // bottom layer
+                            v(1, -1, 0),
+                            v(-1, -1, 0),
+                            v(0, -1, 1),
+                            v(0, -1, -1),
+                    )
+    val VERY_DIAG =
+            DIAG +
+                    listOf(
+                            // mid layer
+                            v(1, 0, 1),
+                            v(-1, 0, 1),
+                            v(1, 0, -1),
+                            v(-1, 0, -1),
+                    )
+    val VERY_VERY_DIAG =
+            VERY_DIAG +
+                    listOf(
+                            // top corners
+                            v(1, 1, 1),
+                            v(-1, 1, 1),
+                            v(1, 1, -1),
+                            v(-1, 1, -1),
+                            // bottom corners
+                            v(1, -1, 1),
+                            v(-1, -1, 1),
+                            v(1, -1, -1),
+                            v(-1, -1, -1),
+                    )
 }

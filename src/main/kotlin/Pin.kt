@@ -8,6 +8,7 @@ import co.aikar.commands.annotation.*
 import com.sk89q.worldedit.bukkit.BukkitAdapter
 import com.sk89q.worldedit.util.SideEffect
 import com.sk89q.worldedit.util.SideEffectSet
+import java.util.*
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.BlockFace
@@ -21,7 +22,6 @@ import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.player.PlayerKickEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.plugin.Plugin
-import java.util.*
 
 fun PluginScope.createPins() {
     val pins = PinCommand(plugin)
@@ -45,11 +45,12 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
     private val pins = mutableMapOf<Pair<UUID, String>, Pin>()
 
     private val Switch.attachedBlockFace: BlockFace
-        get() = when (attachedFace) {
-            FaceAttachable.AttachedFace.CEILING -> BlockFace.DOWN
-            FaceAttachable.AttachedFace.FLOOR -> BlockFace.UP
-            FaceAttachable.AttachedFace.WALL -> facing
-        }
+        get() =
+                when (attachedFace) {
+                    FaceAttachable.AttachedFace.CEILING -> BlockFace.DOWN
+                    FaceAttachable.AttachedFace.FLOOR -> BlockFace.UP
+                    FaceAttachable.AttachedFace.WALL -> facing
+                }
 
     sealed interface PinStateResult {
         data object PinDestroyed : PinStateResult
@@ -57,11 +58,11 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
     }
 
     private fun Pin.setState(
-        newState: PinState,
+            newState: PinState,
     ): PinStateResult = modifyState { newState }
 
     private fun Pin.modifyState(
-        f: (PinState) -> PinState,
+            f: (PinState) -> PinState,
     ): PinStateResult {
         val block = location.block
         val lever = block.blockData as? Switch ?: return PinStateResult.PinDestroyed
@@ -72,26 +73,34 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
 
         val attachedTo = block.getRelative(lever.attachedBlockFace.oppositeFace)
         val weWorld = BukkitAdapter.adapt(block.world)
-        val effects = SideEffectSet.none()
-            .with(SideEffect.UPDATE, SideEffect.State.ON)
-            .with(SideEffect.NEIGHBORS, SideEffect.State.ON)
-        weWorld.applySideEffects(location.toBlockVector3(), BukkitAdapter.adapt(originalLever), effects)
+        val effects =
+                SideEffectSet.none()
+                        .with(SideEffect.UPDATE, SideEffect.State.ON)
+                        .with(SideEffect.NEIGHBORS, SideEffect.State.ON)
         weWorld.applySideEffects(
-            attachedTo.location.toBlockVector3(),
-            BukkitAdapter.adapt(attachedTo.blockData),
-            effects,
+                location.toBlockVector3(),
+                BukkitAdapter.adapt(originalLever),
+                effects
+        )
+        weWorld.applySideEffects(
+                attachedTo.location.toBlockVector3(),
+                BukkitAdapter.adapt(attachedTo.blockData),
+                effects,
         )
         return PinStateResult.OK(newState)
     }
 
     private val blockListener = BlockListener()
-    val listener: Listener get() = blockListener
+    val listener: Listener
+        get() = blockListener
 
     inner class CompletionHandler :
-        CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
+            CommandCompletions.CommandCompletionHandler<BukkitCommandCompletionContext> {
         override fun getCompletions(context: BukkitCommandCompletionContext): Collection<String> {
             val player = context.sender as Player
-            return pins.keys.filter { (uuid, _) -> uuid == player.uniqueId }.map { (_, name) -> name }
+            return pins.keys.filter { (uuid, _) -> uuid == player.uniqueId }.map { (_, name) ->
+                name
+            }
         }
     }
 
@@ -106,10 +115,10 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
     fun list(player: Player) {
         player.info("Your pins:")
         pins
-            .filterKeys { (uuid, _) -> uuid == player.uniqueId }
-            // TODO: click to tp
-            .map { (key, value) -> "${key.second} at ${value.location.toBlockVector3()}" }
-            .forEach(player::info)
+                .filterKeys { (uuid, _) -> uuid == player.uniqueId }
+                // TODO: click to tp
+                .map { (key, value) -> "${key.second} at ${value.location.toBlockVector3()}" }
+                .forEach(player::info)
     }
 
     @Subcommand("add")
@@ -121,15 +130,16 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
             return
         }
         // this control flow is too backwards
-        val result = blockListener.add(player) { event ->
-            if (event.block.type != Material.LEVER) {
-                // this should just ask you to try again
-                player.info("That's not a lever! Restart by doing /pin add $name")
-                return@add
-            }
-            pins[player.uniqueId to name] = Pin(event.block.location)
-            player.info("Pin $name added")
-        }
+        val result =
+                blockListener.add(player) { event ->
+                    if (event.block.type != Material.LEVER) {
+                        // this should just ask you to try again
+                        player.info("That's not a lever! Restart by doing /pin add $name")
+                        return@add
+                    }
+                    pins[player.uniqueId to name] = Pin(event.block.location)
+                    player.info("Pin $name added")
+                }
         when (result) {
             // :(
             BlockListener.BlockResult.ADDED -> "Break the lever you want added as a pin"
@@ -152,10 +162,12 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @CommandPermission("redstonetools.pin.turn")
     @CommandCompletion("@pin_state @$COMPLETION_PINS")
     fun turn(player: Player, newState: PinState, name: String) {
-        val pin = pins[player.uniqueId to name] ?: run {
-            player.info("No pin named $name")
-            return
-        }
+        val pin =
+                pins[player.uniqueId to name]
+                        ?: run {
+                            player.info("No pin named $name")
+                            return
+                        }
         when (pin.setState(newState)) {
             is PinStateResult.OK -> "Turned $name $newState"
             is PinStateResult.PinDestroyed -> "Pin $name has been destroyed!"
@@ -171,10 +183,12 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
             player.info("Time must be between 1 and 100 ticks (inclusive)!")
             return
         }
-        val pin = pins[player.uniqueId to name] ?: run {
-            player.info("No pin named $name")
-            return
-        }
+        val pin =
+                pins[player.uniqueId to name]
+                        ?: run {
+                            player.info("No pin named $name")
+                            return
+                        }
         when (pin.setState(state)) {
             is PinStateResult.OK -> {}
             is PinStateResult.PinDestroyed -> {
@@ -182,15 +196,19 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
                 return
             }
         }
-        plugin.server.scheduler.runTaskLater(plugin, Runnable {
-            // todo factor out
-            when (pin.setState(state.not())) {
-                is PinStateResult.OK -> {}
-                is PinStateResult.PinDestroyed -> {
-                    player.info("Pin $name has been destroyed!")
-                }
-            }
-        }, time * 2L)
+        plugin.server.scheduler.runTaskLater(
+                plugin,
+                Runnable {
+                    // todo factor out
+                    when (pin.setState(state.not())) {
+                        is PinStateResult.OK -> {}
+                        is PinStateResult.PinDestroyed -> {
+                            player.info("Pin $name has been destroyed!")
+                        }
+                    }
+                },
+                time * 2L
+        )
     }
 
     @Subcommand("toggle")
@@ -198,10 +216,12 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
     @CommandPermission("redstonetools.pin.toggle")
     @CommandCompletion("@$COMPLETION_PINS")
     fun toggle(player: Player, name: String) {
-        val pin = pins[player.uniqueId to name] ?: run {
-            player.info("No pin named $name")
-            return
-        }
+        val pin =
+                pins[player.uniqueId to name]
+                        ?: run {
+                            player.info("No pin named $name")
+                            return
+                        }
 
         when (val result = pin.modifyState(PinState::not)) {
             is PinStateResult.OK -> "Toggled $name to ${result.newState}"
@@ -215,7 +235,10 @@ private typealias BlockHandler = (BlockBreakEvent) -> Unit
 private class BlockListener : Listener {
     private val players = mutableMapOf<UUID, BlockHandler>()
 
-    enum class BlockResult { ADDED, EXISTS }
+    enum class BlockResult {
+        ADDED,
+        EXISTS
+    }
 
     fun add(player: Player, onXd: BlockHandler): BlockResult {
         if (player.uniqueId in players) return BlockResult.EXISTS
@@ -244,21 +267,23 @@ private class BlockListener : Listener {
 }
 
 private class PinState(val value: Boolean) {
-    override fun toString(): String = when (value) {
-        false -> "off"
-        true -> "on"
-    }
+    override fun toString(): String =
+            when (value) {
+                false -> "off"
+                true -> "on"
+            }
 
     fun not(): PinState = PinState(!value)
 
     companion object : Thing<PinState> {
         override val readableName = "Pin state"
 
-        override fun of(arg: String): PinState? = when (arg) {
-            "on" -> PinState(true)
-            "off" -> PinState(false)
-            else -> null
-        }
+        override fun of(arg: String): PinState? =
+                when (arg) {
+                    "on" -> PinState(true)
+                    "off" -> PinState(false)
+                    else -> null
+                }
 
         override val values = listOf("on", "off")
         override val valueClass = PinState::class.java
