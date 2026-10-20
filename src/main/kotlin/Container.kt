@@ -10,7 +10,7 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 import kotlin.math.ceil
-import kotlin.math.min
+import kotlin.math.max
 
 fun PluginScope.createContainer() {
     commandManager.apply {
@@ -41,6 +41,7 @@ private class Container : BaseCommand() {
             val text = "Power ${power.originalName}".c()
             displayName(text)
             lore(listOf(text))
+            @Suppress("UsePropertyAccessSyntax") // cannot reassign val
             setEnchantmentGlintOverride(true)
         }
 
@@ -63,19 +64,25 @@ private class Container : BaseCommand() {
         }
     }
 
-    private fun ReadWriteNBTCompoundList.addItems(power: Int, slots: Int) {
-        var itemsNeeded = itemsNeeded(power, slots)
-        if (itemsNeeded == 0) return
-        for (i in 0..(itemsNeeded / 64.toFloat()).toInt()) {
-            addCompound().apply {
-                getOrCreateCompound("item").apply {
-                    setByte("count", min(itemsNeeded, 64).toByte())
-                    setString("id", "minecraft:redstone")
-                }
-                setByte("slot", i.toByte())
+    private fun ReadWriteNBTCompoundList.addSlot(slot: Int, itemCount: Int) {
+        addCompound().apply {
+            getOrCreateCompound("item").apply {
+                setByte("count", itemCount.toByte())
+                setString("id", "minecraft:redstone")
             }
-            itemsNeeded -= 64
+            setByte("slot", slot.toByte())
         }
+    }
+
+    private fun ReadWriteNBTCompoundList.addItems(power: Int, slots: Int) {
+        val itemsNeeded = max(power.toDouble(), ceil(32.0 * (power - 1.0) * slots / 7.0)).toInt()
+        val stacks = itemsNeeded / 64
+        val rest = itemsNeeded % 64
+        repeat(stacks) { i ->
+            addSlot(i, 64)
+        }
+        if (rest == 0) return
+        addSlot(stacks, rest)
     }
 
     private fun ReadWriteNBT.addDisk(power: Int) {
@@ -104,12 +111,6 @@ private class Container : BaseCommand() {
         }
         // 6 minutes, longer than the longest song (blocks, 5:45)
         setInteger("ticks_since_song_started", 6 * 60 * 20)
-    }
-
-    private fun itemsNeeded(power: Int, slots: Int): Int {
-        if (power == 0) return 0
-        if (power == 15) return slots * 64
-        return ceil((32 * slots * power) / 7.toFloat() - 1).toInt()
     }
 }
 
