@@ -25,8 +25,8 @@ dependencies {
     implementation("com.google.re2j:re2j:1.8")
 
     compileOnly("de.tr7zw:item-nbt-api-plugin:2.15.0")
-    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.11-SNAPSHOT")
-    paperweight.paperDevBundle("1.21.8-R0.1-SNAPSHOT")
+    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.4.6-SNAPSHOT")
+    paperweight.paperDevBundle("26.3.build.+")
 
     testImplementation(platform("org.junit:junit-bom:6.1.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -45,12 +45,12 @@ tasks.shadowJar {
 }
 
 java {
-    targetCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_25
 }
 
 tasks.withType<KotlinCompile> {
     compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_21)
+        jvmTarget.set(JvmTarget.JVM_25)
         javaParameters = true
     }
 }
