@@ -5,23 +5,22 @@ import co.aikar.commands.BukkitCommandCompletionContext
 import co.aikar.commands.CommandCompletions
 import co.aikar.commands.CommandHelp
 import co.aikar.commands.annotation.*
-import net.minecraft.core.Direction
-import net.minecraft.world.InteractionHand
-import net.minecraft.world.item.ItemStack
-import net.minecraft.world.phys.BlockHitResult
-import net.minecraft.world.phys.Vec3
+import net.minecraft.world.level.block.LeverBlock
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.data.type.Switch
 import org.bukkit.craftbukkit.CraftWorld
 import org.bukkit.craftbukkit.block.CraftBlock
-import org.bukkit.craftbukkit.entity.CraftPlayer
 import org.bukkit.entity.Player
+import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
+import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerQuitEvent
+import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.plugin.Plugin
 import java.util.*
 
@@ -50,22 +49,25 @@ private class PinCommand(private val plugin: Plugin) : BaseCommand() {
         val newState = f(PinState(lever.isPowered))
         if (lever.isPowered == newState.value) return newState
 
-        val level = (location.world as CraftWorld).handle
-        val pos = (block as CraftBlock).position
-        val nmsPlayer = (player as CraftPlayer).handle
-        // spawn protection & world border
-        if (!level.mayInteract(nmsPlayer, pos)) {
-            throw RedstoneToolsException("No access to pin location!")
-        }
-        nmsPlayer.gameMode.useItemOn(
-            nmsPlayer, level, ItemStack.EMPTY, InteractionHand.MAIN_HAND,
-            BlockHitResult(
-                Vec3.atCenterOf(pos),
-                Direction.DOWN, pos, true,
-            ),
+        val event = PlayerInteractEvent(
+            player,
+            Action.RIGHT_CLICK_BLOCK,
+            null,
+            block,
+            lever.attachedBlockFace.oppositeFace,
+            EquipmentSlot.HAND,
+            location.toVector(),
         )
+        event.callEvent()
+        if (event.useInteractedBlock() == Event.Result.DENY)
+            throw RedstoneToolsException("No permission to modify pin state")
 
-        // useItemOn doesn't return anything useful in case the Paper event is canceled, so we need to do this...
+        val cb = block as CraftBlock
+        val level = (location.world as CraftWorld).handle
+        val state = cb.blockState
+        val lb = state.block as? LeverBlock ?: throw RedstoneToolsException("Cannot get lever block")
+        lb.pull(state, level, cb.position, null)
+
         val actualState = (block.blockData as Switch).isPowered
         if (newState.value != actualState) throw RedstoneToolsException("Failed to modify pin state")
         return newState
